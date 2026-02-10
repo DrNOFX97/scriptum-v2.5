@@ -154,22 +154,48 @@ def create_production_app():
 
         @app.route('/recognize-movie', methods=['POST'])
         def recognize_movie():
-            if 'video' not in request.files:
+            # Support both file upload and JSON with filename
+            if request.is_json:
+                data = request.get_json()
+                filename = data.get('filename', '')
+            elif 'video' in request.files:
+                video = request.files['video']
+                filename = video.filename
+            else:
                 return jsonify({
                     'success': False,
-                    'error': 'Video file is required'
+                    'error': 'Video file or filename is required'
                 }), 400
 
-            video = request.files['video']
-            try:
-                # Placeholder - will implement video analysis
+            if not filename:
                 return jsonify({
-                    'success': True,
-                    'data': {
-                        'message': 'Movie recognition endpoint available',
-                        'filename': video.filename
-                    }
-                })
+                    'success': False,
+                    'error': 'Filename is required'
+                }), 400
+
+            try:
+                # Use MovieService to search for movie
+                movie_service = app.services.get('movie')
+                if not movie_service:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Movie service not available'
+                    }), 503
+
+                # Search by filename
+                result = movie_service.search_by_filename(filename)
+
+                if result:
+                    return jsonify({
+                        'success': True,
+                        'movie': result
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Movie not found'
+                    }), 404
+
             except Exception as e:
                 return jsonify({
                     'success': False,
