@@ -205,6 +205,69 @@ def create_production_app():
     except Exception as e:
         print(f"⚠️  MovieService failed: {e}")
 
+    # =========================================================================
+    # Video Analysis Endpoint
+    # =========================================================================
+    @app.route('/analyze-video', methods=['POST'])
+    def analyze_video():
+        """Analyze uploaded video file"""
+        if 'video' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'Video file is required'
+            }), 400
+
+        video_file = request.files['video']
+        if not video_file.filename:
+            return jsonify({
+                'success': False,
+                'error': 'No file selected'
+            }), 400
+
+        try:
+            # Save uploaded file
+            import uuid
+            from datetime import datetime
+
+            file_ext = video_file.filename.rsplit('.', 1)[-1].lower()
+            safe_filename = f"{uuid.uuid4().hex}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_ext}"
+            filepath = upload_folder / safe_filename
+
+            video_file.save(str(filepath))
+
+            # Try to get video info using VideoService if available
+            video_service = app.services.get('video')
+            if video_service:
+                try:
+                    video_info = video_service.get_video_info(str(filepath))
+                    return jsonify({
+                        'success': True,
+                        'data': {
+                            'filename': video_file.filename,
+                            'saved_as': safe_filename,
+                            'video_info': video_info
+                        }
+                    })
+                except Exception as e:
+                    print(f"Video analysis failed: {e}")
+
+            # Fallback: return basic info
+            return jsonify({
+                'success': True,
+                'data': {
+                    'filename': video_file.filename,
+                    'saved_as': safe_filename,
+                    'size': filepath.stat().st_size,
+                    'message': 'Video uploaded successfully (detailed analysis unavailable)'
+                }
+            })
+
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
     print(f"🚀 App created with {len(app.services)} services loaded")
     return app
 
