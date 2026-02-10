@@ -245,24 +245,24 @@ def create_production_app():
                     video_info = video_service.get_video_info(str(filepath))
                     return jsonify({
                         'success': True,
-                        'data': {
-                            'filename': video_file.filename,
-                            'saved_as': safe_filename,
-                            'video_info': video_info
-                        }
+                        'filename': video_file.filename,
+                        'saved_as': safe_filename,
+                        'video_info': video_info,
+                        'can_remux_to_mp4': False,
+                        'can_convert_to_mp4': False
                     })
                 except Exception as e:
                     print(f"Video analysis failed: {e}")
 
-            # Fallback: return basic info
+            # Fallback: return basic info without video_info
             return jsonify({
                 'success': True,
-                'data': {
-                    'filename': video_file.filename,
-                    'saved_as': safe_filename,
-                    'size': filepath.stat().st_size,
-                    'message': 'Video uploaded successfully (detailed analysis unavailable)'
-                }
+                'filename': video_file.filename,
+                'saved_as': safe_filename,
+                'video_info': None,
+                'can_remux_to_mp4': False,
+                'can_convert_to_mp4': False,
+                'message': 'Video uploaded successfully (detailed analysis unavailable)'
             })
 
         except Exception as e:
