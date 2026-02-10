@@ -1,0 +1,29 @@
+services:
+  # Backend - Flask API
+  - type: web
+    name: scriptum-api
+    runtime: python
+    region: frankfurt # Europa (mais perto)
+    plan: free
+    branch: main
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn -w 2 -b 0.0.0.0:$PORT --timeout 120 app:app"
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: DEBUG
+        value: "False"
+      # Adiciona as tuas API keys no dashboard do Render
+      - key: TMDB_API_KEY
+        sync: false
+      - key: OPENSUBTITLES_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENSUBTITLES_USER_AGENT
+        value: "Scriptum v2.5"
+      - key: LEGENDASDIVX_USER
+        sync: false
+      - key: LEGENDASDIVX_PASS
+        sync: false

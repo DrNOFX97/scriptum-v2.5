@@ -17,6 +17,5 @@ pytest-mock==3.14.0
 # Optional: Rate Limiting (uncomment if implementing)
 # Flask-Limiter==3.8.0
 
-# Optional: Production Server (uncomment for production)
-# gunicorn==23.0.0
-# gevent==24.2.1
+# Production Server (for Render deployment)
+gunicorn==23.0.0
