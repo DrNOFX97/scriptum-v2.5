@@ -61,7 +61,10 @@ def create_production_app():
                     'diagnostics': '/diagnostics',
                     'config': '/config',
                     'search': '/search-subtitles',
-                    'movie': '/recognize-movie'
+                    'movie': '/recognize-movie',
+                    'video': '/analyze-video',
+                    'sync': '/sync',
+                    'translate': '/translate'
                 }
             }
         })
@@ -259,6 +262,102 @@ def create_production_app():
                     'saved_as': safe_filename,
                     'size': filepath.stat().st_size,
                     'message': 'Video uploaded successfully (detailed analysis unavailable)'
+                }
+            })
+
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    # =========================================================================
+    # Subtitle Sync Endpoint
+    # =========================================================================
+    @app.route('/sync', methods=['POST'])
+    def sync_subtitles():
+        """Sync subtitle with video"""
+        if 'video' not in request.files or 'subtitle' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'Both video and subtitle files are required'
+            }), 400
+
+        video_file = request.files['video']
+        subtitle_file = request.files['subtitle']
+
+        try:
+            import uuid
+            from datetime import datetime
+
+            # Save files
+            video_ext = video_file.filename.rsplit('.', 1)[-1].lower()
+            sub_ext = subtitle_file.filename.rsplit('.', 1)[-1].lower()
+
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            video_filename = f"video_{uuid.uuid4().hex[:8]}_{timestamp}.{video_ext}"
+            sub_filename = f"sub_{uuid.uuid4().hex[:8]}_{timestamp}.{sub_ext}"
+
+            video_path = upload_folder / video_filename
+            sub_path = upload_folder / sub_filename
+
+            video_file.save(str(video_path))
+            subtitle_file.save(str(sub_path))
+
+            # Return success with file paths for now
+            # TODO: Implement actual sync logic with SyncService
+            return jsonify({
+                'success': True,
+                'data': {
+                    'message': 'Files uploaded successfully. Sync feature coming soon.',
+                    'video': video_filename,
+                    'subtitle': sub_filename
+                }
+            })
+
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    # =========================================================================
+    # Translation Endpoint
+    # =========================================================================
+    @app.route('/translate', methods=['POST'])
+    def translate_subtitle():
+        """Translate subtitle file"""
+        if 'subtitle' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'Subtitle file is required'
+            }), 400
+
+        subtitle_file = request.files['subtitle']
+        source_lang = request.form.get('source_lang', 'en')
+        target_lang = request.form.get('target_lang', 'pt')
+
+        try:
+            import uuid
+            from datetime import datetime
+
+            # Save file
+            sub_ext = subtitle_file.filename.rsplit('.', 1)[-1].lower()
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            sub_filename = f"translate_{uuid.uuid4().hex[:8]}_{timestamp}.{sub_ext}"
+            sub_path = upload_folder / sub_filename
+
+            subtitle_file.save(str(sub_path))
+
+            # Return success
+            # TODO: Implement actual translation with TranslationService
+            return jsonify({
+                'success': True,
+                'data': {
+                    'message': 'Subtitle uploaded successfully. Translation feature coming soon.',
+                    'filename': sub_filename,
+                    'source_lang': source_lang,
+                    'target_lang': target_lang
                 }
             })
 
