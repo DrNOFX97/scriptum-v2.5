@@ -131,10 +131,10 @@ def create_production_app():
                 }), 400
 
             try:
-                results = app.services['subtitle'].search_subtitles(query, language)
+                results = app.services['subtitle'].search_by_query(query, language)
                 return jsonify({
                     'success': True,
-                    'data': results
+                    'data': {'subtitles': results}
                 })
             except Exception as e:
                 return jsonify({
