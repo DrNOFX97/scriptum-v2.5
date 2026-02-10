@@ -182,8 +182,8 @@ def create_production_app():
                         'error': 'Movie service not available'
                     }), 503
 
-                # Search by filename
-                result = movie_service.search_by_filename(filename)
+                # Recognize movie from filename
+                result = movie_service.recognize_from_filename(filename)
 
                 if result:
                     return jsonify({
