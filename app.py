@@ -25,6 +25,10 @@ from scriptum_api.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
+# Create app instance for Gunicorn
+config = Config()
+app = create_app(config)
+
 
 def main():
     """Main entry point for the application."""
