@@ -19,23 +19,15 @@ def create_production_app():
     """
     app = Flask(__name__)
 
-    # Configure CORS for Firebase Hosting and Netlify
-    CORS(app, resources={
-        r"/*": {
-            "origins": [
-                "https://scriptum-v2-50.web.app",
-                "https://scriptum-v2-50.firebaseapp.com",
-                "https://scriptum-v2-5.netlify.app",
-                "http://localhost:5173",
-                "http://localhost:5001"
-            ],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "expose_headers": ["Content-Range", "X-Content-Range"],
-            "supports_credentials": False,
-            "max_age": 3600
-        }
-    })
+    # Configure CORS - Allow all origins for production
+    # This is necessary because requests come from Firebase Hosting, Netlify, and localhost
+    CORS(app,
+         origins="*",
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         expose_headers=["Content-Range", "X-Content-Range"],
+         supports_credentials=False,
+         max_age=3600)
 
     # Basic configuration
     app.config['DEBUG'] = os.getenv('DEBUG', 'False').lower() == 'true'
