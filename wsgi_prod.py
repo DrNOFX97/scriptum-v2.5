@@ -225,6 +225,14 @@ def create_production_app():
     except Exception as e:
         print(f"⚠️  MovieService failed: {e}")
 
+    # Try to load VideoService
+    try:
+        from scriptum_api.services.video_service import VideoService
+        app.services['video'] = VideoService()
+        print("✅ VideoService loaded")
+    except Exception as e:
+        print(f"⚠️  VideoService failed: {e}")
+
     # =========================================================================
     # Video Analysis Endpoint
     # =========================================================================
