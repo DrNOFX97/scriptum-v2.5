@@ -9,6 +9,9 @@ python-dotenv==1.2.1
 # HTTP Requests
 requests==2.31.0
 
+# Cloud Storage (for large file uploads)
+google-cloud-storage==2.18.2
+
 # Testing
 pytest==8.3.4
 pytest-cov==6.0.0
