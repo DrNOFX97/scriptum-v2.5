@@ -506,16 +506,6 @@ def create_production_app():
                 'error': str(e)
             }), 500
 
-    print(f"🚀 App created with {len(app.services)} services loaded")
-    return app
-
-# Create the app
-app = create_production_app()
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5001))
-    app.run(host='0.0.0.0', port=port)
-
     # =========================================================================
     # Admin endpoint to create storage bucket (temporary)
     # =========================================================================
@@ -524,10 +514,10 @@ if __name__ == '__main__':
         """Admin endpoint to create Cloud Storage bucket"""
         try:
             from src.scriptum_api.utils.storage import get_storage_client
-            
+
             client = get_storage_client()
             bucket_name = 'scriptum-uploads'
-            
+
             # Check if bucket exists
             try:
                 bucket = client.get_bucket(bucket_name)
@@ -538,13 +528,13 @@ if __name__ == '__main__':
                 })
             except Exception:
                 pass
-            
+
             # Create bucket
             bucket = client.create_bucket(
                 bucket_name,
                 location='europe-west1'
             )
-            
+
             # Set CORS
             bucket.cors = [
                 {
@@ -555,11 +545,11 @@ if __name__ == '__main__':
                 }
             ]
             bucket.patch()
-            
+
             # Set lifecycle (auto-delete after 7 days)
             bucket.add_lifecycle_delete_rule(age=7)
             bucket.patch()
-            
+
             return jsonify({
                 'success': True,
                 'message': f'Bucket created successfully: gs://{bucket_name}',
@@ -568,10 +558,20 @@ if __name__ == '__main__':
                 'cors': 'enabled',
                 'lifecycle': '7 days auto-delete'
             })
-            
+
         except Exception as e:
             return jsonify({
                 'success': False,
                 'error': str(e)
             }), 500
+
+    print(f"🚀 App created with {len(app.services)} services loaded")
+    return app
+
+# Create the app
+app = create_production_app()
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port)
 
