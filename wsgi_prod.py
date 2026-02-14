@@ -515,3 +515,63 @@ app = create_production_app()
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(host='0.0.0.0', port=port)
+
+    # =========================================================================
+    # Admin endpoint to create storage bucket (temporary)
+    # =========================================================================
+    @app.route('/admin/create-bucket', methods=['POST'])
+    def admin_create_bucket():
+        """Admin endpoint to create Cloud Storage bucket"""
+        try:
+            from src.scriptum_api.utils.storage import get_storage_client
+            
+            client = get_storage_client()
+            bucket_name = 'scriptum-uploads'
+            
+            # Check if bucket exists
+            try:
+                bucket = client.get_bucket(bucket_name)
+                return jsonify({
+                    'success': True,
+                    'message': f'Bucket already exists: gs://{bucket_name}',
+                    'bucket': bucket_name
+                })
+            except Exception:
+                pass
+            
+            # Create bucket
+            bucket = client.create_bucket(
+                bucket_name,
+                location='europe-west1'
+            )
+            
+            # Set CORS
+            bucket.cors = [
+                {
+                    "origin": ["https://scriptum-v2-50.web.app", "http://localhost:5173"],
+                    "method": ["GET", "PUT", "POST"],
+                    "responseHeader": ["Content-Type"],
+                    "maxAgeSeconds": 3600
+                }
+            ]
+            bucket.patch()
+            
+            # Set lifecycle (auto-delete after 7 days)
+            bucket.add_lifecycle_delete_rule(age=7)
+            bucket.patch()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Bucket created successfully: gs://{bucket_name}',
+                'bucket': bucket_name,
+                'location': 'europe-west1',
+                'cors': 'enabled',
+                'lifecycle': '7 days auto-delete'
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
