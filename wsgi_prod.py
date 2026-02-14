@@ -513,10 +513,13 @@ def create_production_app():
     def admin_create_bucket():
         """Admin endpoint to create Cloud Storage bucket"""
         try:
-            from src.scriptum_api.utils.storage import get_storage_client
+            # Import here to avoid loading issues
+            import os
+            from datetime import timedelta
+            from google.cloud import storage
 
-            client = get_storage_client()
-            bucket_name = 'scriptum-uploads'
+            bucket_name = os.getenv('STORAGE_BUCKET', 'scriptum-uploads')
+            client = storage.Client()
 
             # Check if bucket exists
             try:
@@ -560,9 +563,11 @@ def create_production_app():
             })
 
         except Exception as e:
+            import traceback
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'traceback': traceback.format_exc()
             }), 500
 
     print(f"🚀 App created with {len(app.services)} services loaded")
