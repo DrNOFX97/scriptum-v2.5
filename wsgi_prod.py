@@ -408,27 +408,81 @@ def create_production_app():
     # Cloud Storage Upload Endpoints (for large files)
     # =========================================================================
 
-    @app.route('/upload/request', methods=['POST'])
-    def request_upload():
-        """Generate signed URL for direct upload to Cloud Storage"""
-        data = request.get_json()
-        filename = data.get('filename', 'video.mp4')
-        content_type = data.get('content_type', 'video/mp4')
+    @app.route('/upload/stream', methods=['POST'])
+    def stream_upload():
+        """Stream upload directly to Cloud Storage (bypasses signed URL issues)"""
+        if 'video' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'Video file is required'
+            }), 400
+
+        video_file = request.files['video']
+        if not video_file.filename:
+            return jsonify({
+                'success': False,
+                'error': 'No file selected'
+            }), 400
 
         try:
-            from src.scriptum_api.utils.storage import generate_upload_signed_url
+            import uuid
+            from datetime import datetime
+            from google.cloud import storage
 
-            result = generate_upload_signed_url(filename, content_type)
+            # Generate unique blob name
+            file_ext = video_file.filename.rsplit('.', 1)[-1].lower() if '.' in video_file.filename else 'mp4'
+            blob_name = f"uploads/{datetime.now().strftime('%Y%m%d')}/{uuid.uuid4().hex}_{video_file.filename}"
+
+            # Upload to Cloud Storage
+            client = storage.Client()
+            bucket = client.bucket('scriptum-uploads')
+            blob = bucket.blob(blob_name)
+
+            # Stream upload with content type
+            content_type = video_file.content_type or 'video/mp4'
+            blob.upload_from_file(video_file.stream, content_type=content_type)
+
+            # Try to get video info
+            video_service = app.services.get('video')
+            video_info = None
+
+            if video_service:
+                try:
+                    import tempfile
+                    import os
+
+                    # Download to temp file for analysis
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_ext}') as tmp:
+                        temp_path = tmp.name
+
+                    blob.download_to_filename(temp_path)
+                    video_info = video_service.get_video_info(temp_path)
+                    os.unlink(temp_path)
+
+                except Exception as e:
+                    print(f"⚠️  Video analysis failed: {e}")
+
+            # Try movie recognition
+            movie_result = None
+            movie_service = app.services.get('movie')
+            if movie_service:
+                try:
+                    movie_result = movie_service.recognize_from_filename(video_file.filename)
+                except Exception as e:
+                    print(f"⚠️  Movie recognition failed: {e}")
 
             return jsonify({
                 'success': True,
-                'upload_url': result['signed_url'],
-                'blob_name': result['blob_name'],
-                'bucket': result['bucket']
+                'filename': video_file.filename,
+                'blob_name': blob_name,
+                'video_info': video_info,
+                'movie': movie_result,
+                'can_remux_to_mp4': False,
+                'can_convert_to_mp4': False
             })
 
         except Exception as e:
-            print(f"❌ Error generating upload URL: {e}")
+            print(f"❌ Error uploading file: {e}")
             return jsonify({
                 'success': False,
                 'error': str(e)
