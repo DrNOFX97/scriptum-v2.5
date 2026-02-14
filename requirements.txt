@@ -12,6 +12,12 @@ requests==2.31.0
 # Cloud Storage (for large file uploads)
 google-cloud-storage==2.18.2
 
+# Subtitle Processing
+pysrt==1.1.2
+
+# Video Processing (optional, for video analysis)
+# ffmpeg-python==0.2.0
+
 # Testing
 pytest==8.3.4
 pytest-cov==6.0.0
