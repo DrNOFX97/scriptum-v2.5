@@ -41,9 +41,16 @@ def create_app(config: Optional[Config] = None, upload_folder: Optional[Path] = 
     app.config.from_object(config)
     app.config['MAX_CONTENT_LENGTH'] = config.MAX_VIDEO_SIZE
 
-    # Enable CORS
-    CORS(app)
-    logger.debug("CORS enabled")
+    # Enable CORS with production-friendly settings
+    import os
+    cors_origins = os.getenv('CORS_ORIGINS', '*')  # Default to allow all in production
+    CORS(app,
+         origins=cors_origins.split(',') if cors_origins != '*' else '*',
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         supports_credentials=False,
+         max_age=3600)
+    logger.debug(f"CORS enabled (origins: {cors_origins})")
 
     # Setup upload folder
     if upload_folder is None:
@@ -109,6 +116,8 @@ def _register_blueprints(app: Flask, services: ServiceContainer, config: Config)
         create_sync_blueprint,
         create_translation_blueprint,
         create_config_blueprint,
+        create_audio_conversion_blueprint,
+        create_audio_extraction_blueprint,
     )
 
     # Register blueprints
@@ -119,6 +128,8 @@ def _register_blueprints(app: Flask, services: ServiceContainer, config: Config)
         ('sync', create_sync_blueprint(services, config)),
         ('translation', create_translation_blueprint(services, config)),
         ('config', create_config_blueprint(services, config)),
+        ('audio_conversion', create_audio_conversion_blueprint(services, config)),
+        ('audio_extraction', create_audio_extraction_blueprint(services, config)),
     ]
 
     for name, blueprint in blueprints:
@@ -143,20 +154,28 @@ def print_banner(config: Config, services: ServiceContainer) -> None:
     print("Architecture: Service-Oriented (Modular + Dependency Injection)")
     print()
     print("Endpoints:")
-    print("  GET  /health                  - Health check")
-    print("  GET  /diagnostics             - Configuration diagnostics")
-    print("  POST /analyze-video           - Analyze video file")
-    print("  POST /recognize-movie         - Recognize movie from filename")
-    print("  POST /remux-mkv-to-mp4        - Remux MKV to MP4 (instant)")
-    print("  POST /convert-to-mp4          - Convert video to MP4")
-    print("  POST /extract-mkv-subtitles   - Extract MKV subtitles")
-    print("  POST /search-subtitles        - Search OpenSubtitles")
-    print("  POST /download-subtitle       - Download subtitle")
-    print("  GET  /download/<filename>     - Download file")
-    print("  POST /sync                    - Sync subtitles (MLX Whisper)")
-    print("  POST /translate               - Translate subtitles (Gemini)")
-    print("  GET  /config                  - Get configuration")
-    print("  POST /config                  - Update configuration")
+    print("  GET  /health                       - Health check")
+    print("  GET  /diagnostics                  - Configuration diagnostics")
+    print("  POST /analyze-video                - Analyze video file")
+    print("  POST /recognize-movie              - Recognize movie from filename")
+    print("  POST /remux-mkv-to-mp4             - Remux MKV to MP4 (instant)")
+    print("  POST /convert-to-mp4               - Convert video to MP4")
+    print("  POST /extract-mkv-subtitles        - Extract MKV subtitles")
+    print("  POST /detect-audio-codec           - Detect audio codec (quick)")
+    print("  POST /convert-audio-mkv            - Convert audio AC3/DTS → AAC")
+    print("  GET  /convert-audio-status/<id>    - Get conversion job status")
+    print("  GET  /convert-audio-download/<id>  - Download converted video")
+    print("  POST /convert-audio-cancel/<id>    - Cancel conversion job")
+    print("  POST /extract-convert-audio        - Extract audio → AAC (dual player)")
+    print("  GET  /extract-audio-status/<id>    - Get extraction job status")
+    print("  GET  /extract-audio-download/<id>  - Download extracted AAC audio")
+    print("  POST /search-subtitles             - Search OpenSubtitles")
+    print("  POST /download-subtitle            - Download subtitle")
+    print("  GET  /download/<filename>          - Download file")
+    print("  POST /sync                         - Sync subtitles (MLX Whisper)")
+    print("  POST /translate                    - Translate subtitles (Gemini)")
+    print("  GET  /config                       - Get configuration")
+    print("  POST /config                       - Update configuration")
     print()
     print(f"Server: http://localhost:{config.PORT}")
     print()
