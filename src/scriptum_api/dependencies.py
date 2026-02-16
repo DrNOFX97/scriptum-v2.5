@@ -13,6 +13,7 @@ from .services.subtitle_service import SubtitleService
 from .services.translation_service import TranslationService
 from .services.sync_service import SyncService
 from .services.legendasdivx_service import LegendasDivxService
+from .services.job_storage_service import JobStorageService
 from .utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -35,6 +36,7 @@ class ServiceContainer:
     translation_service: TranslationService
     sync_service: SyncService
     legendasdivx_service: LegendasDivxService
+    job_storage_service: JobStorageService
 
     @classmethod
     def create(cls, config: Config) -> 'ServiceContainer':
@@ -71,8 +73,11 @@ class ServiceContainer:
             sync_service = SyncService()
             logger.debug("SyncService initialized")
 
-            legendasdivx_service = LegendasDivxService()
-            logger.debug("LegendasDivxService initialized")
+            legendasdivx_service = LegendasDivxService(api_base_url=config.LEGENDASDIVX_API_URL)
+            logger.debug(f"LegendasDivxService initialized with URL: {config.LEGENDASDIVX_API_URL}")
+
+            job_storage_service = JobStorageService()
+            logger.debug("JobStorageService initialized")
 
             logger.info("All services initialized successfully")
 
@@ -82,7 +87,8 @@ class ServiceContainer:
                 subtitle_service=subtitle_service,
                 translation_service=translation_service,
                 sync_service=sync_service,
-                legendasdivx_service=legendasdivx_service
+                legendasdivx_service=legendasdivx_service,
+                job_storage_service=job_storage_service
             )
 
         except Exception as e:

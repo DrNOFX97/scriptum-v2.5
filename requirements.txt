@@ -11,9 +11,12 @@ requests==2.31.0
 
 # Cloud Storage (for large file uploads)
 google-cloud-storage==2.18.2
+google-cloud-firestore==2.19.0  # Job persistence across Cloud Run instances
 
 # Subtitle Processing
 pysrt==1.1.2
+rarfile==4.2  # For extracting LegendasDivx RAR archives
+langdetect==1.0.9  # Language detection for subtitles
 
 # Video Processing (optional, for video analysis)
 # ffmpeg-python==0.2.0
