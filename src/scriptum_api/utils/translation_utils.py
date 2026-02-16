@@ -205,8 +205,11 @@ class SubtitleFormatter:
 class GeminiTranslator:
     """Tradutor usando Google Gemini API"""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, source_lang: str = 'en', target_lang: str = 'pt-PT', movie_context: str = ''):
         self.api_key = api_key
+        self.source_lang = source_lang
+        self.target_lang = target_lang
+        self.movie_context = movie_context
         self.api_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
         self.batch_size = 10
         self.max_retries = 3
@@ -287,15 +290,29 @@ class GeminiTranslator:
         """Constrói prompt para tradução"""
         numbered = '\n'.join([f"{i+1}. {text}" for i, text in enumerate(texts)])
 
-        return f"""Traduza as seguintes legendas de INGLÊS para PORTUGUÊS DE PORTUGAL (PT-PT).
+        # Language names mapping
+        lang_names = {
+            'en': 'INGLÊS',
+            'pt-PT': 'PORTUGUÊS DE PORTUGAL (PT-PT)',
+            'pt-BR': 'PORTUGUÊS DO BRASIL (PT-BR)',
+            'es': 'ESPANHOL',
+            'fr': 'FRANCÊS',
+            'de': 'ALEMÃO',
+            'it': 'ITALIANO',
+            'ja': 'JAPONÊS',
+            'ko': 'COREANO',
+            'zh': 'CHINÊS',
+        }
 
-CONTEXTO: Filme de animação "Zootopia" (em Portugal: "Zootrópolis")
+        source_name = lang_names.get(self.source_lang, self.source_lang.upper())
+        target_name = lang_names.get(self.target_lang, self.target_lang.upper())
 
-REGRAS IMPORTANTES:
-- Use português de Portugal (PT-PT), não brasileiro
-- Use SEMPRE a segunda pessoa (tu/você) nas falas, nunca a terceira pessoa
-- Linguagem adequada para desenhos animados (clara, direta, expressiva)
-- "Zootopia" deve ser traduzido como "Zootrópolis"
+        # Build context line
+        context_line = f"\nCONTEXTO: {self.movie_context}" if self.movie_context else ""
+
+        # Base rules that apply to all translations
+        base_rules = f"""REGRAS IMPORTANTES:
+- Use {target_name}
 - Máximo de 2 linhas por legenda
 - Usa 1 linha sempre que o texto couber numa única linha
 - Usa 2 linhas apenas quando o texto for longo, equilibrando as duas linhas
@@ -305,9 +322,27 @@ REGRAS IMPORTANTES:
 - Preserve tags HTML se existirem (como <i>, <b>, etc.)
 - Mantenha a numeração exata
 - Não adicione comentários ou explicações
-- Retorne apenas as traduções numeradas
-- Tom adequado para filme familiar/infantil
-- Não exceda 2 linhas por legenda
+- Retorne apenas as traduções numeradas"""
+
+        # Add specific rules for Spanish to Portuguese (Portugal) translation
+        spanish_to_pt_rules = ""
+        if self.source_lang in ['es', 'spa'] and self.target_lang == 'pt-PT':
+            spanish_to_pt_rules = """
+
+ATENÇÃO ESPECIAL - TRATAMENTO FORMAL/INFORMAL (ESPANHOL → PORTUGUÊS PT):
+- "tú" (informal) → "tu" com conjugações PT-PT corretas
+  Exemplos: "tú tienes" → "tu tens", "tú hablas" → "tu falas", "tú eres" → "tu és"
+- "usted" (formal) → "você" ou "o senhor/a senhora"
+  Exemplos: "usted tiene" → "você tem", "¿cómo está usted?" → "como está?"
+- "vosotros" (informal plural) → "vocês"
+- "ustedes" (formal plural) → "vocês" ou "os senhores/as senhoras"
+- RIGOROSAMENTE mantenha a formalidade/informalidade do original
+- Use as conjugações verbais CORRETAS para PT-PT (não PT-BR)
+- Atenção especial aos pronomes reflexivos: "se" pode mudar dependendo do contexto"""
+
+        return f"""Traduza as seguintes legendas de {source_name} para {target_name}.{context_line}
+
+{base_rules}{spanish_to_pt_rules}
 
 LEGENDAS A TRADUZIR:
 {numbered}

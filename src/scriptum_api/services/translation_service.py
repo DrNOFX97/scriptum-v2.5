@@ -3,7 +3,8 @@ Translation service
 Handles subtitle translation using Google Gemini API with existing translate.py module
 """
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
+import time
 
 # Import existing translation module (now in utils)
 from ..utils.translation_utils import SRTParser, GeminiTranslator, SubtitleValidator, Subtitle
@@ -22,8 +23,9 @@ class TranslationService:
         """
         self.api_key = api_key
         self.batch_size = batch_size
-        self.translator = GeminiTranslator(api_key) if api_key else None
         self.validator = SubtitleValidator()
+        # Translator will be created with specific languages when translate_file is called
+        self.translator = None
 
     def translate_file(
         self,
@@ -31,7 +33,8 @@ class TranslationService:
         output_path: Path,
         source_lang: str,
         target_lang: str,
-        movie_context: Optional[str] = None
+        movie_context: Optional[str] = None,
+        progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None
     ) -> bool:
         """
         Translate subtitle file
@@ -42,15 +45,25 @@ class TranslationService:
             source_lang: Source language code (en, pt)
             target_lang: Target language code (en, pt)
             movie_context: Optional movie name for context
+            progress_callback: Optional callback for progress updates
 
         Returns:
             True if successful
         """
-        if not self.translator:
+        if not self.api_key:
             print("⚠️  Gemini API key not configured")
             return False
 
         try:
+            # Create translator with specific source/target languages and context
+            self.translator = GeminiTranslator(
+                self.api_key,
+                source_lang=source_lang,
+                target_lang=target_lang,
+                movie_context=movie_context or ''
+            )
+            start_time = time.time()
+
             print(f"\n{'='*70}")
             print(f"🌐 Translating: {input_path.name}")
             print(f"   {source_lang.upper()} → {target_lang.upper()}")
@@ -63,13 +76,25 @@ class TranslationService:
                 content = f.read()
 
             original_subs = SRTParser.parse(content)
-            print(f"📝 Parsed {len(original_subs)} subtitle entries")
+            total_entries = len(original_subs)
+            print(f"📝 Parsed {total_entries} subtitle entries")
+
+            if progress_callback:
+                progress_callback({
+                    'status': 'parsing',
+                    'total_entries': total_entries,
+                    'current_entry': 0,
+                    'percentage': 0,
+                    'message': f'Parsed {total_entries} entries'
+                })
 
             # Translate in batches
             translated_subs = []
             total_batches = (len(original_subs) + self.batch_size - 1) // self.batch_size
+            recent_translations = []  # Store last 5 translations
 
             for batch_num in range(total_batches):
+                batch_start_time = time.time()
                 start_idx = batch_num * self.batch_size
                 end_idx = min(start_idx + self.batch_size, len(original_subs))
                 batch = original_subs[start_idx:end_idx]
@@ -80,10 +105,51 @@ class TranslationService:
                 translated_batch = self.translator._translate_texts(batch)
                 translated_subs.extend(translated_batch)
 
-                print(f"✅ Batch {batch_num + 1} complete")
+                # Calculate progress metrics
+                batch_time = time.time() - batch_start_time
+                current_entry = len(translated_subs)
+                percentage = int((current_entry / total_entries) * 100)
+
+                # Calculate speed (entries per second)
+                elapsed_time = time.time() - start_time
+                speed = current_entry / elapsed_time if elapsed_time > 0 else 0
+
+                # Estimate time remaining
+                remaining_entries = total_entries - current_entry
+                eta_seconds = remaining_entries / speed if speed > 0 else 0
+
+                # Store recent translations (last 5)
+                for orig, trans in zip(batch, translated_batch):
+                    recent_translations.append({
+                        'original': orig.text,
+                        'translated': trans.text
+                    })
+                recent_translations = recent_translations[-5:]  # Keep only last 5
+
+                print(f"✅ Batch {batch_num + 1} complete ({batch_time:.1f}s)")
+
+                if progress_callback:
+                    progress_callback({
+                        'status': 'translating',
+                        'total_entries': total_entries,
+                        'current_entry': current_entry,
+                        'percentage': percentage,
+                        'speed': round(speed, 2),
+                        'eta_seconds': int(eta_seconds),
+                        'recent_translations': recent_translations,
+                        'message': f'Batch {batch_num + 1}/{total_batches} complete'
+                    })
 
             # Validate and fix line breaks
             print("\n🔍 Validating translations...")
+
+            if progress_callback:
+                progress_callback({
+                    'status': 'validating',
+                    'percentage': 95,
+                    'message': 'Validating translations...'
+                })
+
             issues = self.validator.validate(original_subs, translated_subs)
 
             if issues['line_rule_violations']:
@@ -97,9 +163,22 @@ class TranslationService:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(output_content)
 
+            total_time = time.time() - start_time
+
             print(f"\n✅ Translation complete: {output_path.name}")
             print(f"   Total entries: {len(translated_subs)}")
+            print(f"   Total time: {total_time:.1f}s")
             print(f"{'='*70}\n")
+
+            if progress_callback:
+                progress_callback({
+                    'status': 'complete',
+                    'total_entries': total_entries,
+                    'current_entry': total_entries,
+                    'percentage': 100,
+                    'total_time': round(total_time, 2),
+                    'message': 'Translation complete!'
+                })
 
             return True
 
@@ -107,6 +186,13 @@ class TranslationService:
             print(f"❌ Translation error: {e}")
             import traceback
             traceback.print_exc()
+
+            if progress_callback:
+                progress_callback({
+                    'status': 'error',
+                    'message': str(e)
+                })
+
             return False
 
     def translate_text(
