@@ -64,3 +64,10 @@ translate.py
 test.js
 retranslate-fixed.js
 GCP_DEPLOY_READY.md
+
+# Large video files (exceed GitHub limit)
+movies/
+*.mkv
+*.mp4
+*.avi
+*.mov
