@@ -58,3 +58,9 @@ tmp/
 
 # Node modules (if using npm)
 node_modules/
+
+# Files with hardcoded API keys (old, insecure)
+translate.py
+test.js
+retranslate-fixed.js
+GCP_DEPLOY_READY.md
