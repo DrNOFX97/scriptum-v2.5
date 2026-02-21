@@ -76,7 +76,6 @@ def create_sync_blueprint(services: ServiceContainer, config: Config) -> Bluepri
             # Video already uploaded to GCS via parallel upload
             logger.info(f"Using pre-uploaded video from GCS: {video_gcs_path}")
 
-            # Download from GCS to temp location
             from google.cloud import storage as gcs_storage
             gcs_client = gcs_storage.Client()
 
@@ -86,14 +85,44 @@ def create_sync_blueprint(services: ServiceContainer, config: Config) -> Bluepri
             object_name = object_parts[0] if object_parts else ''
 
             bucket_ref = gcs_client.bucket(bucket_name)
-            blob = bucket_ref.blob(object_name)
 
-            # Download to temp location
+            # Check if AAC cache exists in GCS (much smaller than video!)
             video_filename = object_name.split('/')[-1]
-            video_path = UPLOAD_FOLDER / f"sync_video_{timestamp}_{video_filename}"
-            logger.info(f"Downloading video from GCS to {video_path}...")
-            blob.download_to_filename(str(video_path))
-            logger.info(f"Video downloaded ({video_path.stat().st_size:,} bytes)")
+            aac_object_name = object_name.rsplit('.', 1)[0] + '.aac'
+            aac_blob = bucket_ref.blob(aac_object_name)
+
+            if aac_blob.exists():
+                # AAC exists! Download only the AAC (much faster, less memory)
+                aac_size_mb = aac_blob.size / (1024 * 1024)
+                logger.info(f"✅ AAC found in GCS ({aac_size_mb:.1f}MB) - downloading AAC only")
+                logger.info(f"   Skipping video download (saves {blob.size / (1024**3):.2f}GB download!)")
+
+                video_path = UPLOAD_FOLDER / f"sync_video_{timestamp}_{video_filename}"
+                aac_path = video_path.with_suffix('.aac')
+
+                aac_blob.download_to_filename(str(aac_path))
+                logger.info(f"✅ AAC downloaded ({aac_size_mb:.1f}MB)")
+
+                # Create a dummy video_path pointing to AAC for compatibility
+                # The sync utils will detect this and use the AAC directly
+                video_path = aac_path
+            else:
+                # No AAC cache - need to download video
+                # WARNING: This may cause OOM for large files!
+                blob = bucket_ref.blob(object_name)
+                video_size_gb = blob.size / (1024**3)
+
+                if video_size_gb > 4:
+                    logger.error(f"Video too large ({video_size_gb:.2f}GB) for download!")
+                    return jsonify({
+                        'success': False,
+                        'error': f'Video too large ({video_size_gb:.2f}GB). Please reduce file size or use local sync.'
+                    }), HTTP_BAD_REQUEST
+
+                video_path = UPLOAD_FOLDER / f"sync_video_{timestamp}_{video_filename}"
+                logger.info(f"Downloading video from GCS ({video_size_gb:.2f}GB)...")
+                blob.download_to_filename(str(video_path))
+                logger.info(f"Video downloaded ({video_path.stat().st_size:,} bytes)")
         else:
             # Traditional file upload
             video_file = request.files['video']

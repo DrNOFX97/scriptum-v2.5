@@ -133,13 +133,19 @@ def ensure_compatible_audio_cached(video_path, gcs_video_path=None):
     - Retorna caminho do .aac para uso em extrações
 
     Args:
-        video_path: Caminho do vídeo local (pode ser temporário)
+        video_path: Caminho do vídeo local (pode ser temporário, ou já ser .aac)
         gcs_video_path: GCS path original (e.g., gs://bucket/video.mkv) ou None
 
     Returns:
         Caminho do ficheiro AAC local (ou vídeo original se já for compatível)
     """
     video_path = Path(video_path)
+
+    # If file is already .aac, return it directly (already downloaded from GCS cache)
+    if video_path.suffix.lower() == '.aac':
+        print(f"   ✅ Using pre-downloaded AAC from GCS cache")
+        print(f"      {video_path.name}")
+        return video_path
 
     # Verificar codec de áudio
     codec = get_audio_codec(video_path)
