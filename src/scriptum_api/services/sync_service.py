@@ -295,17 +295,19 @@ class SyncService:
         subtitle_path: Path,
         output_path: Path,
         tmpdir: Path,
-        log_path: Path
+        log_path: Path,
+        gcs_video_path: str = None
     ) -> Dict[str, Any]:
         """
         Synchronize subtitles with video using MLX Whisper with verbose logging
 
         Args:
-            video_path: Path to video file
+            video_path: Path to video file (local, may be temporary)
             subtitle_path: Path to subtitle file
             output_path: Path for synchronized subtitle
             tmpdir: Temporary directory
             log_path: Path to log file for real-time progress
+            gcs_video_path: Original GCS path (gs://...) or None if local upload
 
         Returns:
             Dictionary with sync results
@@ -461,7 +463,8 @@ class SyncService:
                 video_path,
                 duration,
                 num_samples=num_samples,
-                language=language
+                language=language,
+                gcs_video_path=gcs_video_path
             )
 
             # Handle None (failed to find enough matches)

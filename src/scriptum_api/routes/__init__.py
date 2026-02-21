@@ -10,6 +10,7 @@ from .translation import create_translation_blueprint
 from .config import create_config_blueprint
 from .audio_conversion import create_audio_conversion_blueprint
 from .audio_extraction import create_audio_extraction_blueprint
+from .chunked_upload import create_chunked_upload_blueprint
 
 __all__ = [
     'create_health_blueprint',
@@ -20,4 +21,5 @@ __all__ = [
     'create_config_blueprint',
     'create_audio_conversion_blueprint',
     'create_audio_extraction_blueprint',
+    'create_chunked_upload_blueprint',
 ]

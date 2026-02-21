@@ -13,6 +13,7 @@ import os
 from ..dependencies import ServiceContainer
 from ..config import Config
 from ..utils.logger import setup_logger
+from ..utils.subtitle_validator import validate_subtitles
 from ..constants import HTTP_BAD_REQUEST, HTTP_INTERNAL_ERROR, LANGUAGE_FALLBACK
 
 logger = setup_logger(__name__)
@@ -250,5 +251,60 @@ def create_subtitles_blueprint(services: ServiceContainer, config: Config) -> Bl
         except Exception as e:
             logger.error(f"Error reading sync log '{filename}': {e}", exc_info=True)
             return jsonify({'logs': [f'Error: {e}'], 'complete': False})
+
+    @bp.route('/validate-subtitles', methods=['POST'])
+    def validate_subtitle_quality():
+        """
+        Validate subtitle quality based on PT-PT professional standards
+
+        Request: FormData with 'subtitle' file OR JSON with 'content'/'filename'
+
+        Response: JSON
+            - success: bool
+            - validation: validation results with problems and stats
+        """
+        try:
+            srt_content = None
+
+            # Try FormData first (file upload)
+            if 'subtitle' in request.files:
+                subtitle_file = request.files['subtitle']
+                srt_content = subtitle_file.read().decode('utf-8')
+
+            # Try JSON
+            elif request.is_json:
+                data = request.get_json()
+
+                if 'content' in data:
+                    srt_content = data['content']
+                elif 'filename' in data:
+                    filepath = UPLOAD_FOLDER / data['filename']
+                    if not filepath.exists():
+                        return jsonify({'error': 'File not found'}), 404
+
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        srt_content = f.read()
+
+            if not srt_content:
+                return jsonify({'error': 'No subtitle content provided'}), HTTP_BAD_REQUEST
+
+            logger.info("Validating subtitle quality (PT-PT standards)")
+
+            # Run validation
+            validation_results = validate_subtitles(srt_content)
+
+            logger.info(
+                f"Validation complete: {validation_results['total_entries']} entries, "
+                f"{len(validation_results['problems'])} problems found"
+            )
+
+            return jsonify({
+                'success': True,
+                'validation': validation_results
+            })
+
+        except Exception as e:
+            logger.error(f"Subtitle validation error: {e}", exc_info=True)
+            return jsonify({'success': False, 'error': str(e)}), HTTP_INTERNAL_ERROR
 
     return bp

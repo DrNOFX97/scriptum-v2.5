@@ -123,20 +123,21 @@ def get_audio_codec(video_path):
         return None
 
 
-def ensure_compatible_audio_cached(video_path):
+def ensure_compatible_audio_cached(video_path, gcs_video_path=None):
     """
     Garante que existe uma versão AAC do áudio e retorna o caminho.
 
     Se o vídeo tem áudio AC3/DTS/etc:
-    - Verifica se já existe ficheiro .aac na mesma pasta
-    - Se não existir, converte e guarda
+    - Se vídeo veio do GCS: verifica/cria cache AAC no GCS
+    - Se vídeo é local: verifica/cria cache AAC localmente
     - Retorna caminho do .aac para uso em extrações
 
     Args:
-        video_path: Caminho do vídeo original
+        video_path: Caminho do vídeo local (pode ser temporário)
+        gcs_video_path: GCS path original (e.g., gs://bucket/video.mkv) ou None
 
     Returns:
-        Caminho do ficheiro AAC (ou vídeo original se já for compatível)
+        Caminho do ficheiro AAC local (ou vídeo original se já for compatível)
     """
     video_path = Path(video_path)
 
@@ -151,56 +152,129 @@ def ensure_compatible_audio_cached(video_path):
         print(f"   ✅ Áudio já compatível ({codec.upper() if codec else 'unknown'})")
         return video_path
 
-    # Caminho do AAC cache (mesma pasta, mesmo nome, extensão .aac)
-    aac_cache_path = video_path.with_suffix('.aac')
+    # Modo GCS: cache permanente no GCS
+    if gcs_video_path:
+        from google.cloud import storage as gcs_storage
 
-    # Se cache já existe, reutiliza
-    if aac_cache_path.exists():
-        cache_size_mb = aac_cache_path.stat().st_size / (1024 * 1024)
-        print(f"   ✅ Usando áudio AAC em cache ({cache_size_mb:.1f}MB)")
-        print(f"      {aac_cache_path.name}")
-        return aac_cache_path
+        # Parse GCS path: gs://bucket/path/video.mkv -> bucket, path/video.aac
+        gcs_path = gcs_video_path[5:]  # strip gs://
+        bucket_name, *object_parts = gcs_path.split('/', 1)
+        object_name = object_parts[0] if object_parts else ''
 
-    # Converter áudio completo para AAC
-    print(f"   🔄 Convertendo áudio {codec.upper()} → AAC...")
-    print(f"      Isto só acontece uma vez, será guardado para uso futuro")
+        # AAC object name (replace extension)
+        aac_object_name = object_name.rsplit('.', 1)[0] + '.aac'
+        aac_gcs_path = f"gs://{bucket_name}/{aac_object_name}"
 
-    try:
-        # Extrair todo o áudio e converter para AAC
-        subprocess.run(
-            [
-                "ffmpeg",
-                "-y",
-                "-i", str(video_path),
-                "-vn",  # Sem vídeo
-                "-c:a", "aac",
-                "-b:a", "192k",  # Qualidade boa
-                str(aac_cache_path)
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=True
-        )
+        # Local AAC path (same name as video but .aac)
+        aac_local_path = video_path.with_suffix('.aac')
 
-        cache_size_mb = aac_cache_path.stat().st_size / (1024 * 1024)
-        print(f"   ✅ AAC criado e guardado ({cache_size_mb:.1f}MB)")
-        print(f"      {aac_cache_path.name}")
-        print(f"      Próximas sincronizações serão mais rápidas!")
+        gcs_client = gcs_storage.Client()
+        bucket_ref = gcs_client.bucket(bucket_name)
+        aac_blob = bucket_ref.blob(aac_object_name)
 
-        return aac_cache_path
+        # Check if AAC exists in GCS
+        if aac_blob.exists():
+            cache_size_mb = aac_blob.size / (1024 * 1024)
+            print(f"   ✅ AAC encontrado no GCS ({cache_size_mb:.1f}MB)")
+            print(f"      {aac_gcs_path}")
+            print(f"   📥 A descarregar AAC do GCS...")
+            aac_blob.download_to_filename(str(aac_local_path))
+            print(f"   ✅ AAC descarregado")
+            return aac_local_path
 
-    except subprocess.CalledProcessError as e:
-        print(f"   ⚠️  Conversão falhou, usando vídeo original")
-        return video_path
+        # AAC not in GCS, need to convert
+        print(f"   🔄 Convertendo áudio {codec.upper()} → AAC...")
+        print(f"      Será guardado no GCS para uso futuro")
+
+        try:
+            # Convert to AAC locally
+            subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-i", str(video_path),
+                    "-vn",  # No video
+                    "-c:a", "aac",
+                    "-b:a", "192k",  # Good quality
+                    str(aac_local_path)
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True
+            )
+
+            cache_size_mb = aac_local_path.stat().st_size / (1024 * 1024)
+            print(f"   ✅ AAC criado ({cache_size_mb:.1f}MB)")
+
+            # Upload to GCS
+            print(f"   📤 A fazer upload do AAC para GCS...")
+            aac_blob.upload_from_filename(str(aac_local_path))
+            print(f"   ✅ AAC guardado no GCS: {aac_gcs_path}")
+            print(f"      Próximas sincronizações usarão este AAC!")
+
+            return aac_local_path
+
+        except subprocess.CalledProcessError as e:
+            print(f"   ⚠️  Conversão falhou, usando vídeo original")
+            return video_path
+
+    # Modo local: cache na mesma pasta
+    else:
+        aac_cache_path = video_path.with_suffix('.aac')
+
+        # Se cache já existe, reutiliza
+        if aac_cache_path.exists():
+            cache_size_mb = aac_cache_path.stat().st_size / (1024 * 1024)
+            print(f"   ✅ Usando áudio AAC em cache ({cache_size_mb:.1f}MB)")
+            print(f"      {aac_cache_path.name}")
+            return aac_cache_path
+
+        # Converter áudio completo para AAC
+        print(f"   🔄 Convertendo áudio {codec.upper()} → AAC...")
+        print(f"      Isto só acontece uma vez, será guardado para uso futuro")
+
+        try:
+            # Extrair todo o áudio e converter para AAC
+            subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-i", str(video_path),
+                    "-vn",  # Sem vídeo
+                    "-c:a", "aac",
+                    "-b:a", "192k",  # Qualidade boa
+                    str(aac_cache_path)
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True
+            )
+
+            cache_size_mb = aac_cache_path.stat().st_size / (1024 * 1024)
+            print(f"   ✅ AAC criado e guardado ({cache_size_mb:.1f}MB)")
+            print(f"      {aac_cache_path.name}")
+            print(f"      Próximas sincronizações serão mais rápidas!")
+
+            return aac_cache_path
+
+        except subprocess.CalledProcessError as e:
+            print(f"   ⚠️  Conversão falhou, usando vídeo original")
+            return video_path
 
 
-def extract_audio(video_path, audio_path, start_time=0, duration=60):
+def extract_audio(video_path, audio_path, start_time=0, duration=60, gcs_video_path=None):
     """
     Extrai segmento de áudio do vídeo.
     Se o vídeo tem áudio AC3/DTS, usa cache AAC automaticamente.
+    Se vídeo veio do GCS, usa cache AAC do GCS.
+
+    Args:
+        video_path: Caminho local do vídeo
+        audio_path: Caminho de saída para o áudio extraído
+        start_time: Tempo inicial em segundos
+        duration: Duração em segundos
+        gcs_video_path: GCS path original (gs://...) ou None se for upload local
     """
     # Garantir que temos áudio compatível (usa cache se disponível)
-    audio_source = ensure_compatible_audio_cached(video_path)
+    audio_source = ensure_compatible_audio_cached(video_path, gcs_video_path)
 
     subprocess.run(
         [
@@ -250,8 +324,17 @@ def compute_offset_for_segment(srt_path, segments, start_time_offset):
     return statistics.median(offsets)
 
 
-def analyze_sync(srt_path, video_path, video_duration, num_samples=5, language="en"):
-    """Analisa sincronização"""
+def analyze_sync(srt_path, video_path, video_duration, num_samples=5, language="en", gcs_video_path=None):
+    """Analisa sincronização
+
+    Args:
+        srt_path: Caminho do ficheiro SRT
+        video_path: Caminho local do vídeo
+        video_duration: Duração do vídeo em segundos
+        num_samples: Número de pontos de amostragem
+        language: Idioma para transcrição
+        gcs_video_path: GCS path original (gs://...) ou None
+    """
     sample_points = []
     step = video_duration / (num_samples + 1)
     for i in range(1, num_samples + 1):
@@ -262,7 +345,7 @@ def analyze_sync(srt_path, video_path, video_duration, num_samples=5, language="
     with tempfile.TemporaryDirectory() as tmp:
         for idx, start_time in enumerate(sample_points, 1):
             audio = Path(tmp) / f"sample_{idx}.wav"
-            extract_audio(video_path, audio, start_time=int(start_time), duration=45)
+            extract_audio(video_path, audio, start_time=int(start_time), duration=45, gcs_video_path=gcs_video_path)
             segments = transcribe(audio, language=language)
             offset = compute_offset_for_segment(srt_path, segments, start_time)
             if offset is not None:

@@ -10,11 +10,14 @@ from pathlib import Path
 import uuid
 import threading
 import subprocess
+from google.cloud import storage as gcs_storage
 
 from ..dependencies import ServiceContainer
 from ..config import Config
 from ..utils.logger import setup_logger
 from ..constants import HTTP_BAD_REQUEST, HTTP_INTERNAL_ERROR
+
+GCS_BUCKET = "scriptum-uploads"
 
 logger = setup_logger(__name__)
 
@@ -157,29 +160,86 @@ def create_audio_extraction_blueprint(services: ServiceContainer, config: Config
         Extract audio from video and convert to AAC.
         Much faster than full video conversion (only processes audio).
 
-        Request: multipart/form-data
-            - video: video file (MKV with AC3/DTS)
+        Request can be either:
+        1. multipart/form-data with 'video' file
+        2. application/json with 'file_path' (for chunked uploads)
 
         Response: JSON with job_id
         """
-        if 'video' not in request.files:
-            logger.warning("extract-convert-audio: Missing video file in request")
-            return jsonify({'success': False, 'error': 'Missing video file'}), HTTP_BAD_REQUEST
+        # Check if this is a file upload or file path reference
+        if request.is_json:
+            # JSON request with file_path (from chunked upload)
+            data = request.json
+            file_path = data.get('file_path')
+            filename = data.get('filename', 'video.mkv')
 
-        video_file = request.files['video']
+            if not file_path:
+                logger.warning("extract-convert-audio: Missing file_path in JSON request")
+                return jsonify({'success': False, 'error': 'Missing file_path'}), HTTP_BAD_REQUEST
 
-        logger.info(f"Starting audio extraction job: {video_file.filename}")
+            # Handle GCS paths (gs://bucket/path)
+            if file_path.startswith('gs://'):
+                logger.info(f"GCS path detected: {file_path} - downloading to local temp")
+                gcs_client = gcs_storage.Client()
 
-        # Create unique job ID
-        job_id = f"audio_extract_{uuid.uuid4()}"
+                # Parse gs://bucket/object
+                gcs_path = file_path[5:]  # strip gs://
+                bucket_name, *object_parts = gcs_path.split('/', 1)
+                object_name = object_parts[0] if object_parts else ''
 
-        # Create persistent temp directory for this job
-        job_folder = config.TEMP_DIR / f'audio_extract_{job_id}'
-        job_folder.mkdir(parents=True, exist_ok=True)
+                bucket_ref = gcs_client.bucket(bucket_name)
+                blob = bucket_ref.blob(object_name)
 
-        # Save video temporarily
-        video_path = job_folder / video_file.filename
-        video_file.save(str(video_path))
+                # Download to temp location
+                local_filename = object_name.split('/')[-1]
+                video_path = Path(config.TEMP_DIR) / local_filename
+                logger.info(f"Downloading {file_path} to {video_path} ...")
+                blob.download_to_filename(str(video_path))
+                logger.info(f"GCS download complete: {video_path} ({video_path.stat().st_size:,} bytes)")
+            else:
+                video_path = Path(file_path)
+                if not video_path.exists():
+                    logger.warning(f"extract-convert-audio: File not found: {file_path}")
+                    return jsonify({'success': False, 'error': 'File not found'}), HTTP_BAD_REQUEST
+
+            logger.info(f"Starting audio extraction job from uploaded file: {filename}")
+
+        else:
+            # Traditional file upload
+            if 'video' not in request.files:
+                logger.warning("extract-convert-audio: Missing video file in request")
+                return jsonify({'success': False, 'error': 'Missing video file'}), HTTP_BAD_REQUEST
+
+            video_file = request.files['video']
+            filename = video_file.filename
+
+            logger.info(f"Starting audio extraction job: {filename}")
+
+            # Create unique job ID
+            job_id = f"audio_extract_{uuid.uuid4()}"
+
+            # Create persistent temp directory for this job
+            job_folder = config.TEMP_DIR / f'audio_extract_{job_id}'
+            job_folder.mkdir(parents=True, exist_ok=True)
+
+            # Save video temporarily
+            video_path = job_folder / filename
+            video_file.save(str(video_path))
+
+        # Create unique job ID (if not already created)
+        if 'job_id' not in locals():
+            job_id = f"audio_extract_{uuid.uuid4()}"
+
+            # Create persistent temp directory for this job
+            job_folder = config.TEMP_DIR / f'audio_extract_{job_id}'
+            job_folder.mkdir(parents=True, exist_ok=True)
+
+            # Move the uploaded file to the job folder if it's from chunked upload
+            if request.is_json:
+                target_path = job_folder / filename
+                import shutil
+                shutil.move(str(video_path), str(target_path))
+                video_path = target_path
 
         # Output will be AAC audio file
         output_path = job_folder / f"audio_{job_id}.aac"
@@ -194,7 +254,7 @@ def create_audio_extraction_blueprint(services: ServiceContainer, config: Config
         # Initialize job status in Firestore
         job_data = {
             'status': 'pending',
-            'filename': video_file.filename,
+            'filename': filename,
             'output_filename': f"audio_{job_id}.aac",
             'file_size_gb': round(file_size_gb, 2),
             'estimated_time': f"{estimated_minutes} minutos",

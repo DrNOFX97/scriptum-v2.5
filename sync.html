@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scriptum - Sincronização de Legendas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .file-info.active {
+            display: block;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* Button Styles */
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        /* Video Player */
+        .video-container {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+        }
+
+        .video-placeholder {
+            aspect-ratio: 16/9;
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #a0aec0;
+            font-size: 1.2em;
+        }
+
+        /* Sync Controls */
+        .sync-controls {
+            margin-top: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .control-value {
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: #e2e8f0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+
+        /* Status Messages */
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            animation: slideIn 0.3s;
+        }
+
+        .status.active {
+            display: block;
+        }
+
+        .status.info {
+            background: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            color: #0050b3;
+        }
+
+        .status.success {
+            background: #f6ffed;
+            border-left: 4px solid #52c41a;
+            color: #389e0d;
+        }
+
+        .status.error {
+            background: #fff2f0;
+            border-left: 4px solid #ff4d4f;
+            color: #cf1322;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Movie Info */
+        .movie-info {
+            display: none;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .movie-info.active {
+            display: flex;
+            gap: 20px;
+        }
+
+        .movie-poster {
+            width: 120px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .movie-details h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .movie-meta {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .quick-btn {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quick-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .log-container {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            display: none;
+            margin-top: 15px;
+        }
+
+        .log-container.active {
+            display: block;
+        }
+
+        .log-line {
+            color: #a0aec0;
+            padding: 4px 0;
+            border-left: 3px solid transparent;
+            padding-left: 10px;
+        }
+
+        .log-line.success {
+            color: #68d391;
+            border-left-color: #68d391;
+        }
+
+        .log-line.error {
+            color: #fc8181;
+            border-left-color: #fc8181;
+        }
+
+        .log-line.info {
+            color: #63b3ed;
+            border-left-color: #63b3ed;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 800px;
+            max-height: 80vh;
+            width: 90%;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.4em;
+        }
+
+        .modal-close {
+            font-size: 2em;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            padding: 24px;
+            max-height: calc(80vh - 80px);
+            overflow-y: auto;
+        }
+
+        .subtitle-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .subtitle-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .subtitle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .subtitle-title {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .subtitle-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .subtitle-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .subtitle-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+
+        .loading-spinner::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        /* Video Analysis Panel */
+        .analysis-panel {
+            display: none;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .analysis-panel.show {
+            display: block;
+        }
+
+        .analysis-section {
+            margin-bottom: 20px;
+        }
+
+        .analysis-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .analysis-section h4 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .video-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .stat-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .subtitles-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .subtitle-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .subtitle-item:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+
+        .subtitle-item.selected {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: #667eea;
+        }
+
+        .subtitle-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .subtitle-item-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95em;
+        }
+
+        .subtitle-item-lang {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .subtitle-item-meta {
+            font-size: 0.85em;
+            color: #666;
+            display: flex;
+            gap: 12px;
+        }
+
+        .convert-section {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .convert-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .convert-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .convert-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .convert-btn.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-style: italic;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Scriptum</h1>
+            <p>Sincronização Inteligente de Legendas com IA</p>
+        </div>
+
+        <div class="main-layout">
+            <!-- Left Column -->
+            <div>
+                <!-- Video Player -->
+                <div class="card">
+                    <h2>🎥 Pré-visualização</h2>
+                    <div class="video-container" id="videoContainer">
+                        <div class="video-placeholder">
+                            Carregue um vídeo para pré-visualizar
+                        </div>
+                    </div>
+
+                    <!-- Movie Info (IMDB) -->
+                    <div class="movie-info" id="movieInfo">
+                        <img class="movie-poster" id="moviePoster" src="" alt="Poster">
+                        <div class="movie-details">
+                            <h3 id="movieTitle"></h3>
+                            <div class="movie-meta">
+                                <p><strong>Ano:</strong> <span id="movieYear"></span></p>
+                                <p><strong>IMDB:</strong> ⭐ <span id="movieRating"></span></p>
+                                <p><strong>Duração:</strong> <span id="movieDuration"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Analysis Panel -->
+                    <div class="analysis-panel" id="analysisPanel">
+                        <!-- Video Info Section -->
+                        <div class="analysis-section">
+                            <h4>📊 Informações do Vídeo</h4>
+                            <div class="video-stats" id="videoStats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Formato</span>
+                                    <span class="stat-value" id="statFormat">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Tamanho</span>
+                                    <span class="stat-value" id="statSize">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Resolução</span>
+                                    <span class="stat-value" id="statResolution">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Duração</span>
+                                    <span class="stat-value" id="statDuration">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Available Subtitles Section -->
+                        <div class="analysis-section">
+                            <h4>📥 Legendas Disponíveis</h4>
+                            <div class="subtitles-list" id="availableSubtitles">
+                                <div class="loading-spinner">Carregando...</div>
+                            </div>
+                        </div>
+
+                        <!-- Convert to MP4 Section -->
+                        <div class="analysis-section" id="convertSection" style="display: none;">
+                            <h4>🎞️ Extrair MP4 do MKV</h4>
+                            <div class="convert-section">
+                                <p style="margin-bottom: 10px; color: #666; font-size: 0.9em;">
+                                    <strong>Remux (⚡ Instantâneo):</strong> Extrai o vídeo MP4 do MKV sem re-codificar.
+                                    Funciona se o vídeo já estiver em H.264/HEVC.
+                                </p>
+                                <button class="btn" onclick="startRemux()" style="width: 100%; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                                    ⚡ Remux MKV → MP4 (Instantâneo)
+                                </button>
+
+                                <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+
+                                <p style="margin-bottom: 10px; color: #666; font-size: 0.9em;">
+                                    <strong>Conversão completa:</strong> Re-codifica o vídeo (lento, mas funciona sempre).
+                                </p>
+                                <div class="convert-options">
+                                    <button class="convert-btn" data-quality="fast" onclick="selectConvertQuality('fast')">
+                                        ⚡ Rápida<br>
+                                        <span style="font-size: 0.8em; font-weight: normal;">~15min</span>
+                                    </button>
+                                    <button class="convert-btn selected" data-quality="balanced" onclick="selectConvertQuality('balanced')">
+                                        ⚖️ Balanceada<br>
+                                        <span style="font-size: 0.8em; font-weight: normal;">~30min</span>
+                                    </button>
+                                    <button class="convert-btn" data-quality="high" onclick="selectConvertQuality('high')">
+                                        💎 Alta<br>
+                                        <span style="font-size: 0.8em; font-weight: normal;">~60min</span>
+                                    </button>
+                                </div>
+                                <button class="btn" onclick="startConversion()" style="margin-top: 12px; width: 100%;">
+                                    🔄 Conversão Completa
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sync Controls -->
+                    <div class="sync-controls">
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>⏱️ Ajuste Manual de Sincronização</span>
+                                <span class="control-value" id="offsetValue">0.00s</span>
+                            </div>
+                            <input type="range" id="offsetSlider" min="-10" max="10" step="0.1" value="0">
+                        </div>
+
+                        <div class="quick-actions">
+                            <button class="quick-btn" onclick="adjustOffset(-0.5)">⏪ -0.5s</button>
+                            <button class="quick-btn" onclick="adjustOffset(0.5)">⏩ +0.5s</button>
+                            <button class="quick-btn" onclick="adjustOffset(-5)">⏪⏪ -5s</button>
+                            <button class="quick-btn" onclick="adjustOffset(5)">⏩⏩ +5s</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div>
+                <!-- File Upload -->
+                <div class="card">
+                    <h2>📁 Ficheiros</h2>
+
+                    <!-- Video Upload -->
+                    <div class="upload-area" id="videoUpload" onclick="document.getElementById('videoInput').click()">
+                        <div class="upload-icon">🎬</div>
+                        <h3>Carregar Vídeo</h3>
+                        <p>Clique ou arraste o ficheiro</p>
+                        <p style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            ✅ Formatos aceites: MP4, MKV, AVI, WebM, MOV, FLV, WMV e mais<br>
+                            ℹ️ A sincronização funciona mesmo se o vídeo não reproduzir no browser
+                        </p>
+                        <input type="file" id="videoInput" class="file-input" accept="video/*,.mkv,.mp4,.avi,.webm,.mov,.flv,.wmv,.m4v">
+                    </div>
+                    <div class="file-info" id="videoInfo">
+                        <div class="file-name" id="videoName"></div>
+                        <div class="file-size" id="videoSize"></div>
+                    </div>
+
+                    <!-- Subtitle Upload -->
+                    <div class="upload-area" id="subtitleUpload" onclick="document.getElementById('subtitleInput').click()">
+                        <div class="upload-icon">📄</div>
+                        <h3>Carregar Legenda</h3>
+                        <p>Ficheiro .srt</p>
+                        <input type="file" id="subtitleInput" class="file-input" accept=".srt">
+                    </div>
+                    <div class="file-info" id="subtitleInfo">
+                        <div class="file-name" id="subtitleName"></div>
+                        <div class="file-size" id="subtitleSize"></div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <button class="btn" id="extractBtn" disabled onclick="extractMKVSubtitles()" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); display: none;">
+                        📤 Extrair Legendas do MKV
+                    </button>
+                    <button class="btn" id="searchBtn" disabled onclick="searchOpenSubtitles()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        🔍 Buscar Legendas Online
+                    </button>
+
+                    <!-- Translation Section -->
+                    <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <span style="font-weight: bold; color: #667eea;">🌐 Traduzir Legenda:</span>
+                            <select id="sourceLang" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; background: white;">
+                                <option value="en">Inglês</option>
+                                <option value="pt">Português</option>
+                            </select>
+                            <span style="font-size: 1.2em;">→</span>
+                            <select id="targetLang" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; background: white;">
+                                <option value="pt" selected>Português</option>
+                                <option value="en">Inglês</option>
+                            </select>
+                        </div>
+                        <button class="btn" id="translateBtn" disabled onclick="translateSubtitle()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100%;">
+                            🌐 Traduzir com Google Gemini
+                        </button>
+                    </div>
+
+                    <button class="btn" id="syncBtn" disabled onclick="startAutoSync()">
+                        🤖 Sincronizar Automaticamente
+                    </button>
+                    <button class="btn btn-secondary" id="applyBtn" disabled onclick="applyManualSync()">
+                        ✅ Aplicar Ajuste Manual
+                    </button>
+                    <button class="btn" id="downloadBtn" disabled onclick="downloadSubtitle()">
+                        💾 Download Legenda Sincronizada
+                    </button>
+
+                    <!-- Progress -->
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="status" id="status"></div>
+
+                    <!-- Log -->
+                    <div class="log-container" id="logContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OpenSubtitles Modal -->
+    <div class="modal" id="subtitlesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔍 Legendas Disponíveis - OpenSubtitles</h2>
+                <span class="modal-close" onclick="closeSubtitlesModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="subtitlesResults">
+                <!-- Results will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Video.js for better format support -->
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+
+    <script src="sync.js"></script>
+</body>
+</html>

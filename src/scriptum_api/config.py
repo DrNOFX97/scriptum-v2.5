@@ -43,6 +43,9 @@ class Config:
     # TMDB settings
     TMDB_LANGUAGE = 'pt-BR'
 
+    # LegendasDivx API settings
+    LEGENDASDIVX_API_URL = os.getenv('LEGENDASDIVX_API_URL', 'https://legendasdivx-api-315653817267.europe-west1.run.app')
+
     @classmethod
     def validate(cls):
         """Validate required configuration"""

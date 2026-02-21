@@ -129,12 +129,14 @@ def create_sync_blueprint(services: ServiceContainer, config: Config) -> Bluepri
                 tmpdir_path = Path(tmpdir)
 
                 # Sync using service with logging
+                # Pass GCS path if available for AAC caching
                 result = services.sync_service.sync_subtitles_with_log(
                     video_path,
                     subtitle_path,
                     output_path,
                     tmpdir_path,
-                    log_path
+                    log_path,
+                    gcs_video_path=video_gcs_path
                 )
 
             # Clean up temp files

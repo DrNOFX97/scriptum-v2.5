@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Simples - Card Visível</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            padding: 40px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Teste Simples - Card Sempre Visível</h1>
+        <p>Este teste mostra o card SEM JavaScript para verificar se o CSS funciona.</p>
+
+        <!-- Movie Metadata Card - SEM classe hidden, COM dados fixos -->
+        <div id="movieMetadataCard" class="movie-metadata-card">
+            <div class="metadata-header">
+                <h3>📽️ Informações do Filme</h3>
+            </div>
+
+            <div class="metadata-content">
+                <div class="metadata-poster">
+                    <div class="poster-placeholder">🎬</div>
+                </div>
+
+                <div class="metadata-info">
+                    <h4 id="movieTitle">Inception</h4>
+                    <div class="movie-details">
+                        <span id="movieRating" class="detail-item">⭐ 8.8/10</span>
+                        <span id="movieYear" class="detail-item">📅 2010</span>
+                        <span id="movieRuntime" class="detail-item">⏱️ 148 min</span>
+                    </div>
+                    <div id="movieGenres" class="movie-genres">
+                        <span class="genre-tag">Action</span>
+                        <span class="genre-tag">Sci-Fi</span>
+                        <span class="genre-tag">Thriller</span>
+                    </div>
+                    <p id="movieOverview" class="movie-overview">
+                        Dom Cobb é um ladrão especializado em roubar segredos do subconsciente das pessoas durante o sono.
+                        Cobb recebe a oportunidade de apagar o seu passado criminal ao realizar uma tarefa impossível:
+                        plantar uma ideia na mente de alguém.
+                    </p>
+                </div>
+            </div>
+
+            <div id="movieCastSection" class="cast-section">
+                <h4>👥 Personagens Principais</h4>
+                <div id="movieCast" class="cast-list">
+                    <div class="cast-item">
+                        <div>
+                            <div class="character">Cobb</div>
+                            <div class="actor">Leonardo DiCaprio</div>
+                        </div>
+                    </div>
+                    <div class="cast-item">
+                        <div>
+                            <div class="character">Arthur</div>
+                            <div class="actor">Joseph Gordon-Levitt</div>
+                        </div>
+                    </div>
+                    <div class="cast-item">
+                        <div>
+                            <div class="character">Ariadne</div>
+                            <div class="actor">Ellen Page</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metadata-options">
+                <label class="option-label">
+                    <input type="checkbox" id="preserveCharacterNames" checked>
+                    <span>Preservar nomes de personagens na tradução</span>
+                </label>
+                <label class="option-label">
+                    <input type="checkbox" id="useMovieContext" checked>
+                    <span>Aplicar contexto do filme à tradução</span>
+                </label>
+            </div>
+
+            <div id="glossaryPreview" class="glossary-preview">
+                <div class="glossary-header">
+                    <span>📝 Glossário: <strong id="glossaryCount">5</strong> termos</span>
+                </div>
+                <div id="glossaryTerms" class="glossary-terms">
+                    <span class="glossary-term">Cobb</span>
+                    <span class="glossary-term">Arthur</span>
+                    <span class="glossary-term">Ariadne</span>
+                    <span class="glossary-term">Eames</span>
+                    <span class="glossary-term">Mal</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #e8f5e9; border-radius: 12px; border: 2px solid #4caf50;">
+            <h3>✅ Status</h3>
+            <p><strong>Se vês o card acima com informações do Inception, o CSS está a funcionar corretamente!</strong></p>
+            <p>Se não vês nada, há um problema com o ficheiro style.css.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Corretor de Linhas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-case {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border: 1px solid #3a3a3a;
+        }
+        .test-case h3 {
+            margin-top: 0;
+            color: #60a5fa;
+        }
+        .original { color: #10b981; }
+        .translated { color: #f59e0b; }
+        .fixed { color: #8b5cf6; }
+        pre {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .stats {
+            background: #1e40af;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste do Corretor de Quebras de Linha</h1>
+
+    <button onclick="runTests()">▶️ Executar Testes</button>
+
+    <div id="output"></div>
+
+    <script src="translator.js"></script>
+    <script>
+        // Mock da classe para testar apenas os métodos de correção
+        const translator = new GeminiTranslator('fake-key');
+
+        const testCases = [
+            {
+                name: 'Caso 1: Diálogo duplo com linha extra',
+                original: {
+                    text: 'Hello there!\nHow are you?'
+                },
+                translated: 'Olá!\nComo\nestás?',
+                expectedLines: 2
+            },
+            {
+                name: 'Caso 2: Legenda simples (1 linha)',
+                original: {
+                    text: 'Good morning!'
+                },
+                translated: 'Bom dia!',
+                expectedLines: 1
+            },
+            {
+                name: 'Caso 3: Três linhas colapsadas em uma',
+                original: {
+                    text: 'First line\nSecond line\nThird line'
+                },
+                translated: 'Primeira linha Segunda linha Terceira linha',
+                expectedLines: 3
+            },
+            {
+                name: 'Caso 4: Já correto (2 linhas)',
+                original: {
+                    text: 'This is correct\nNo changes needed'
+                },
+                translated: 'Isto está correto\nNão precisa de mudanças',
+                expectedLines: 2
+            },
+            {
+                name: 'Caso 5: Uma linha que virou duas',
+                original: {
+                    text: 'Short text'
+                },
+                translated: 'Texto\ncurto',
+                expectedLines: 1
+            }
+        ];
+
+        function runTests() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            console.log('🧪 Iniciando testes do corretor de linhas...\n');
+
+            let passedTests = 0;
+            let totalTests = testCases.length;
+
+            testCases.forEach((testCase, index) => {
+                console.log(`\n📝 ${testCase.name}`);
+                console.log(`Original (${testCase.expectedLines} linhas):`);
+                console.log(testCase.original.text);
+                console.log(`\nTraduzido (${testCase.translated.split('\n').length} linhas):`);
+                console.log(testCase.translated);
+
+                // Testar o corretor
+                const originalLines = testCase.original.text.split('\n').length;
+                const translatedLines = testCase.translated.split('\n').length;
+
+                let fixed = testCase.translated;
+                let needsFix = translatedLines !== originalLines;
+
+                if (needsFix) {
+                    fixed = translator.redistributeLines(testCase.translated, originalLines);
+                    console.log(`\n🔧 Corrigido (${fixed.split('\n').length} linhas):`);
+                    console.log(fixed);
+                }
+
+                const fixedLines = fixed.split('\n').length;
+                const passed = fixedLines === originalLines;
+
+                if (passed) {
+                    passedTests++;
+                    console.log(`✅ PASSOU: ${fixedLines} linhas == ${originalLines} linhas`);
+                } else {
+                    console.log(`❌ FALHOU: ${fixedLines} linhas != ${originalLines} linhas`);
+                }
+
+                // Render no HTML
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test-case';
+                testDiv.innerHTML = `
+                    <h3>${passed ? '✅' : '❌'} ${testCase.name}</h3>
+                    <div class="original">
+                        <strong>Original (${originalLines} linhas):</strong>
+                        <pre>${escapeHtml(testCase.original.text)}</pre>
+                    </div>
+                    <div class="translated">
+                        <strong>Traduzido (${translatedLines} linhas):</strong>
+                        <pre>${escapeHtml(testCase.translated)}</pre>
+                    </div>
+                    ${needsFix ? `
+                    <div class="fixed">
+                        <strong>Corrigido (${fixedLines} linhas):</strong>
+                        <pre>${escapeHtml(fixed)}</pre>
+                    </div>
+                    ` : '<p style="color: #10b981;">✅ Não precisa correção</p>'}
+                `;
+                output.appendChild(testDiv);
+            });
+
+            // Stats
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'stats';
+            statsDiv.innerHTML = `
+                <h2>📊 Resultados dos Testes</h2>
+                <p><strong>Total:</strong> ${totalTests} testes</p>
+                <p><strong>Passou:</strong> ${passedTests} (${(passedTests/totalTests*100).toFixed(1)}%)</p>
+                <p><strong>Falhou:</strong> ${totalTests - passedTests}</p>
+            `;
+            output.insertBefore(statsDiv, output.firstChild);
+
+            console.log(`\n\n📊 RESUMO: ${passedTests}/${totalTests} testes passaram (${(passedTests/totalTests*100).toFixed(1)}%)`);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Executar testes automaticamente ao carregar
+        window.addEventListener('load', () => {
+            console.log('✅ Página carregada, pronto para testar!');
+        });
+    </script>
+</body>
+</html>

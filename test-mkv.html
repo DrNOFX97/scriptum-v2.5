@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste MKV Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .upload-area {
+            border: 2px dashed #3b82f6;
+            padding: 40px;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            background: #f0f9ff;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Upload MKV</h1>
+
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <p>📦 Clique para carregar ficheiro MKV</p>
+        <input type="file" id="fileInput" accept=".mkv,.srt" hidden>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const output = document.getElementById('output');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            console.log(message);
+        }
+
+        log('✅ Script carregado');
+
+        fileInput.addEventListener('change', (event) => {
+            log('🔄 Event listener ativado');
+
+            const file = event.target.files[0];
+
+            if (!file) {
+                log('⚠️ Nenhum ficheiro selecionado');
+                return;
+            }
+
+            log(`📁 Ficheiro: ${file.name}`);
+            log(`📏 Tamanho: ${file.size} bytes`);
+            log(`🏷️ Tipo: ${file.type}`);
+            log(`📅 Última modificação: ${file.lastModified}`);
+
+            const fileName = file.name.toLowerCase();
+
+            if (fileName.endsWith('.mkv')) {
+                log('✅ Ficheiro MKV detectado!');
+                log('🚀 Processar ficheiro MKV aqui...');
+            } else if (fileName.endsWith('.srt')) {
+                log('✅ Ficheiro SRT detectado!');
+            } else {
+                log('❌ Tipo de ficheiro não suportado');
+            }
+        });
+
+        log('✅ Event listener registado');
+    </script>
+</body>
+</html>

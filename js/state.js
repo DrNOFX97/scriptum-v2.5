@@ -1,0 +1,33 @@
+export const state = {
+  apiBase: localStorage.getItem('scriptum.apiBase') || 'http://localhost:5001',
+  autoDownload: localStorage.getItem('scriptum.autoDownload') !== 'false',
+  language: localStorage.getItem('scriptum.language') || 'pt',
+  translateBlob: null,
+  syncBlob: null,
+  extractResults: [],
+  diagnostics: {
+    tmdb: true,
+    opensubtitles: true,
+    gemini: true,
+  },
+  project: {
+    videoFile: null,
+    videoUrl: null,
+    subtitleFile: null,
+    entries: [],
+    embeddedSubtitles: [],
+    versions: [],
+    activeVersionId: null,
+    activeIndex: null,
+    movie: null,
+    videoInfo: null,
+    states: {
+      videoLoaded: false,
+      subtitleMissing: true,
+      subtitleActive: false,
+      subtitleTranslated: false,
+      subtitleSynced: false,
+      subtitleEditing: false,
+    },
+  },
+};

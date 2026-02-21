@@ -1,0 +1,33 @@
+======================================================================
+🎬 Iniciando sincronização
+   Vídeo: sync_video_1770695679_The Housemaid 2025 1080p WEB-DL HEVC x265 5.1 BONE.mkv
+   Legenda: sync_sub_1770695679_2025 - The Housemaid.srt
+======================================================================
+
+📊 Analisando framerates...
+   Vídeo: 23.976 fps
+   Legenda: 50.000 fps
+🔧 Convertendo framerate: 50.000 → 23.976 fps
+   ✅ Framerate convertido
+
+📏 Obtendo duração do vídeo...
+   Duração: 7882.0s (131min 22s)
+
+🎙️  Detectando idioma do áudio...
+   Extraindo amostra de áudio (30s)...
+   Transcrevendo amostra para detectar idioma...
+   ✅ Idioma detectado: EN
+
+🤖 Iniciando análise com MLX Whisper (EN)...
+   Este processo pode demorar 5-10 minutos...
+
+   📍 Selecionando 5 pontos de amostragem ao longo do vídeo...
+   🎤 Transcrevendo áudio em cada ponto...
+   📝 Comparando com texto das legendas...
+
+
+⚠️  Análise não conseguiu calcular offset
+   Possíveis causas:
+   - Áudio não corresponde às legendas
+   - Idioma detectado incorreto
+   - Qualidade do áudio insuficiente

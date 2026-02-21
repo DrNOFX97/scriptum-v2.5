@@ -1,0 +1,823 @@
+/**
+ * MKV Subtitle Extractor - Interface para extração de legendas
+ */
+
+class MKVExtractorUI {
+    constructor() {
+        this.tracks = [];
+        this.selectedTracks = new Set();
+        this.currentMkvFile = null;
+
+        this.initializeElements();
+        this.setupEventListeners();
+    }
+
+    initializeElements() {
+        // File input
+        this.fileInput = document.getElementById('srtFile'); // Usar o input principal
+        this.fileNameDisplay = document.getElementById('mkvFileName');
+
+        // Tracks list
+        this.tracksContainer = document.getElementById('subtitleTracksList');
+        this.tracksCard = document.getElementById('subtitleTracksCard');
+
+        // Buttons
+        this.analyzeBtn = document.getElementById('analyzeMkvBtn');
+        this.extractBtn = document.getElementById('extractSubtitlesBtn');
+        this.selectAllBtn = document.getElementById('selectAllTracksBtn');
+        this.deselectAllBtn = document.getElementById('deselectAllTracksBtn');
+
+        // Progress
+        this.extractProgress = document.getElementById('extractionProgress');
+        this.extractedList = document.getElementById('extractedSubtitlesList');
+
+        console.log('🔧 MKV Extractor elementos inicializados');
+    }
+
+    setupEventListeners() {
+        // Analyze button
+        if (this.analyzeBtn) {
+            this.analyzeBtn.addEventListener('click', () => this.analyzeMkvFile());
+            console.log('✅ Analyze button listener attached');
+        }
+
+        // Extract button
+        if (this.extractBtn) {
+            this.extractBtn.addEventListener('click', () => this.extractSelectedTracks());
+        }
+
+        // Select/Deselect all
+        if (this.selectAllBtn) {
+            this.selectAllBtn.addEventListener('click', () => this.selectAllTracks());
+        }
+
+        if (this.deselectAllBtn) {
+            this.deselectAllBtn.addEventListener('click', () => this.deselectAllTracks());
+        }
+    }
+
+
+    async analyzeMkvFile() {
+        if (!this.currentMkvFile) {
+            alert('Por favor selecione um ficheiro MKV primeiro!');
+            return;
+        }
+
+        console.log('🔍 Analisando ficheiro MKV...');
+
+        try {
+            // Criar FormData para enviar ficheiro
+            const formData = new FormData();
+            formData.append('mkv_file', this.currentMkvFile);
+
+            // Chamar backend para analisar
+            const response = await fetch('http://localhost:8080/api/mkv/analyze', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erro HTTP: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('📦 Tracks recebidas:', result);
+
+            if (result.tracks && result.tracks.length > 0) {
+                this.tracks = result.tracks;
+                this.renderTracks();
+            } else {
+                alert('Nenhuma track de legendas encontrada neste ficheiro!');
+            }
+
+        } catch (error) {
+            console.error('❌ Erro ao analisar MKV:', error);
+            alert(`Erro ao analisar ficheiro: ${error.message}`);
+        }
+    }
+
+    renderTracks() {
+        console.log('🎨 Renderizando tracks de legendas...');
+
+        this.tracksContainer.innerHTML = '';
+        this.selectedTracks.clear();
+
+        if (this.tracks.length === 0) {
+            this.tracksCard.classList.add('hidden');
+            return;
+        }
+
+        this.tracksCard.classList.remove('hidden');
+
+        // Criar item para cada track
+        this.tracks.forEach(track => {
+            const trackItem = this.createTrackItem(track);
+            this.tracksContainer.appendChild(trackItem);
+
+            // Selecionar por defeito se for a track padrão
+            if (track.is_default) {
+                this.selectedTracks.add(track.id);
+                trackItem.querySelector('input[type="checkbox"]').checked = true;
+            }
+        });
+
+        // Atualizar contador
+        this.updateSelectionCount();
+    }
+
+    createTrackItem(track) {
+        const item = document.createElement('div');
+        item.className = 'track-item';
+
+        // Detectar idioma usando o sistema centralizado
+        const langDisplay = window.languageDetector.getLanguageDisplay(track);
+        const flagEmoji = langDisplay.flag;
+        const languageName = langDisplay.name;
+
+        // Default marker
+        const defaultMarker = track.is_default ? '<span class="default-badge">Padrão</span>' : '';
+
+        // Forced marker (para legendas obrigatórias, ex: sinais, alien text, etc)
+        const forcedMarker = track.name && track.name.toLowerCase().includes('forced')
+            ? '<span class="forced-badge">Forçada</span>' : '';
+
+        // SDH/CC marker (para legendas para surdos)
+        const sdhMarker = track.name && (
+            track.name.toLowerCase().includes('sdh') ||
+            track.name.toLowerCase().includes('cc') ||
+            track.name.toLowerCase().includes('deaf')
+        ) ? '<span class="sdh-badge">SDH</span>' : '';
+
+        item.innerHTML = `
+            <label class="track-label">
+                <input type="checkbox"
+                       data-track-id="${track.id}"
+                       class="track-checkbox">
+                <div class="track-info">
+                    <div class="track-header">
+                        <span class="track-language">${flagEmoji} ${languageName}</span>
+                        <span class="track-codec">${track.codec}</span>
+                        ${defaultMarker}
+                        ${forcedMarker}
+                        ${sdhMarker}
+                    </div>
+                    ${track.name ? `<div class="track-name">${track.name}</div>` : ''}
+                    <div class="track-id">Track ID: ${track.id}</div>
+                </div>
+            </label>
+        `;
+
+        // Listener para checkbox
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        checkbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                this.selectedTracks.add(track.id);
+            } else {
+                this.selectedTracks.delete(track.id);
+            }
+            this.updateSelectionCount();
+        });
+
+        return item;
+    }
+
+    /**
+     * Detecta idioma e variante a partir do código (suporta ISO 639-1, 639-2 e 639-3)
+     * e informações do nome da track
+     */
+    detectLanguageInfo(track) {
+        const langCode = (track.language || 'und').toLowerCase();
+        const trackName = (track.name || '').toLowerCase();
+
+        // Normalizar código de idioma (converter para código de 3 letras padrão)
+        const normalizedCode = this.normalizeLanguageCode(langCode);
+
+        // Detectar variante linguística pelo nome da track
+        let variant = null;
+
+        // Português: PT-PT vs PT-BR
+        if (normalizedCode === 'por') {
+            if (trackName.includes('brazil') || trackName.includes('brazilian') ||
+                trackName.includes('brasil') || trackName.includes('pt-br') || trackName.includes('ptbr')) {
+                variant = 'BR';
+            } else if (trackName.includes('portugal') || trackName.includes('european') ||
+                       trackName.includes('pt-pt') || trackName.includes('ptpt')) {
+                variant = 'PT';
+            }
+            // Se não especificado, assumir PT-PT (mais comum em web-dl europeus)
+        }
+
+        // Inglês: US vs UK
+        if (normalizedCode === 'eng') {
+            if (trackName.includes('us') || trackName.includes('american')) {
+                variant = 'US';
+            } else if (trackName.includes('uk') || trackName.includes('british')) {
+                variant = 'GB';
+            }
+        }
+
+        // Espanhol: ES vs LATAM
+        if (normalizedCode === 'spa') {
+            if (trackName.includes('latin') || trackName.includes('latam') ||
+                trackName.includes('latino') || trackName.includes('mx')) {
+                variant = 'LATAM';
+            } else if (trackName.includes('spain') || trackName.includes('castellano') ||
+                       trackName.includes('españa')) {
+                variant = 'ES';
+            }
+        }
+
+        // Francês: FR vs CA (Canadá)
+        if (normalizedCode === 'fra') {
+            if (trackName.includes('canada') || trackName.includes('canadian') ||
+                trackName.includes('québec') || trackName.includes('quebec')) {
+                variant = 'CA';
+            }
+        }
+
+        // Chinês: Simplificado vs Tradicional
+        if (normalizedCode === 'chi' || normalizedCode === 'zho') {
+            if (trackName.includes('traditional') || trackName.includes('hant') ||
+                trackName.includes('tw') || trackName.includes('hk')) {
+                variant = 'TRAD';
+            } else if (trackName.includes('simplified') || trackName.includes('hans') ||
+                       trackName.includes('cn')) {
+                variant = 'SIMP';
+            }
+        }
+
+        return { code: normalizedCode, variant: variant };
+    }
+
+    /**
+     * Normaliza códigos de idioma para formato padrão de 3 letras (ISO 639-2)
+     */
+    normalizeLanguageCode(code) {
+        const normalized = code.toLowerCase();
+
+        // Mapa completo de códigos de 2 letras (ISO 639-1) para 3 letras (ISO 639-2/T)
+        const iso2to3 = {
+            // Principais idiomas
+            'en': 'eng', 'pt': 'por', 'es': 'spa', 'fr': 'fra', 'de': 'ger',
+            'it': 'ita', 'ja': 'jpn', 'zh': 'chi', 'ko': 'kor', 'ru': 'rus',
+
+            // Europa Ocidental
+            'nl': 'dut', 'sv': 'swe', 'no': 'nor', 'da': 'dan', 'fi': 'fin',
+            'is': 'ice', 'ga': 'gle', 'cy': 'wel', 'gd': 'gla',
+
+            // Europa Central e Oriental
+            'pl': 'pol', 'cs': 'cze', 'sk': 'slo', 'hu': 'hun', 'ro': 'rum',
+            'bg': 'bul', 'hr': 'hrv', 'sr': 'srp', 'sl': 'slv', 'mk': 'mac',
+            'sq': 'alb', 'lt': 'lit', 'lv': 'lav', 'et': 'est',
+
+            // Europa do Sul
+            'el': 'gre', 'tr': 'tur', 'mt': 'mlt',
+
+            // Ex-URSS
+            'uk': 'ukr', 'be': 'bel', 'kk': 'kaz', 'uz': 'uzb', 'az': 'aze',
+            'hy': 'arm', 'ka': 'geo', 'ky': 'kir', 'tg': 'tgk', 'tk': 'tuk',
+
+            // Médio Oriente
+            'ar': 'ara', 'he': 'heb', 'fa': 'per', 'ur': 'urd', 'ku': 'kur',
+
+            // Ásia do Sul
+            'hi': 'hin', 'bn': 'ben', 'pa': 'pan', 'ta': 'tam', 'te': 'tel',
+            'ml': 'mal', 'mr': 'mar', 'gu': 'guj', 'kn': 'kan', 'si': 'sin',
+            'ne': 'nep',
+
+            // Sudeste Asiático
+            'th': 'tha', 'vi': 'vie', 'id': 'ind', 'ms': 'may', 'tl': 'tgl',
+            'my': 'bur', 'km': 'khm', 'lo': 'lao',
+
+            // Leste Asiático
+            'mn': 'mon',
+
+            // África
+            'sw': 'swa', 'am': 'amh', 'ha': 'hau', 'yo': 'yor', 'ig': 'ibo',
+            'zu': 'zul', 'xh': 'xho', 'af': 'afr', 'so': 'som',
+
+            // Línguas construídas
+            'eo': 'epo',
+
+            // Outros
+            'ca': 'cat', 'eu': 'baq', 'gl': 'glg'
+        };
+
+        // Mapa de variações alternativas de códigos de 3 letras (ISO 639-2/B para ISO 639-2/T)
+        const iso3variants = {
+            'deu': 'ger', 'nld': 'dut', 'fra': 'fre', 'zho': 'chi',
+            'ces': 'cze', 'slk': 'slo', 'ron': 'rum', 'isl': 'ice',
+            'ell': 'gre', 'sqi': 'alb', 'hye': 'arm', 'eus': 'baq',
+            'mya': 'bur', 'kat': 'geo', 'mkd': 'mac', 'msa': 'may',
+            'fas': 'per', 'bod': 'tib', 'cym': 'wel'
+        };
+
+        // Se for código de 2 letras, converter
+        if (normalized.length === 2 && iso2to3[normalized]) {
+            return iso2to3[normalized];
+        }
+
+        // Se for variante alternativa de 3 letras, normalizar
+        if (normalized.length === 3 && iso3variants[normalized]) {
+            return iso3variants[normalized];
+        }
+
+        // Se já for de 3 letras válido, retornar
+        return normalized;
+    }
+
+    /**
+     * Retorna emoji de bandeira baseado no idioma e variante
+     */
+    getLanguageFlag(langCode, track = null) {
+        // Detectar variante se track fornecida
+        let variant = null;
+        if (track) {
+            const info = this.detectLanguageInfo(track);
+            langCode = info.code;
+            variant = info.variant;
+        }
+
+        const code = this.normalizeLanguageCode(langCode);
+
+        // Bandeiras base por idioma (organizadas por região)
+        const flags = {
+            // Principais idiomas (com códigos alternativos)
+            'eng': variant === 'US' ? '🇺🇸' : '🇬🇧',
+            'por': variant === 'BR' ? '🇧🇷' : '🇵🇹',
+            'spa': variant === 'LATAM' ? '🇲🇽' : '🇪🇸',
+            'fra': variant === 'CA' ? '🇨🇦' : '🇫🇷',
+            'fre': variant === 'CA' ? '🇨🇦' : '🇫🇷', // ISO 639-2/B
+            'ger': '🇩🇪',
+            'deu': '🇩🇪', // ISO 639-2/T
+            'ita': '🇮🇹',
+            'jpn': '🇯🇵',
+            'chi': variant === 'TRAD' ? '🇹🇼' : '🇨🇳',
+            'zho': variant === 'TRAD' ? '🇹🇼' : '🇨🇳',
+            'kor': '🇰🇷',
+            'rus': '🇷🇺',
+
+            // Europa Ocidental (com códigos alternativos)
+            'dut': '🇳🇱', 'nld': '🇳🇱', // Holandês
+            'swe': '🇸🇪', 'nor': '🇳🇴', 'dan': '🇩🇰',
+            'fin': '🇫🇮',
+            'ice': '🇮🇸', 'isl': '🇮🇸', // Islandês
+            'gle': '🇮🇪',
+            'wel': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'cym': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', // Galês
+            'gla': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+
+            // Europa Central e Oriental (com códigos alternativos)
+            'pol': '🇵🇱',
+            'cze': '🇨🇿', 'ces': '🇨🇿', // Checo
+            'slo': '🇸🇰', 'slk': '🇸🇰', // Eslovaco
+            'hun': '🇭🇺',
+            'rum': '🇷🇴', 'ron': '🇷🇴', // Romeno
+            'bul': '🇧🇬', 'hrv': '🇭🇷', 'srp': '🇷🇸',
+            'slv': '🇸🇮',
+            'mac': '🇲🇰', 'mkd': '🇲🇰', // Macedónio
+            'alb': '🇦🇱', 'sqi': '🇦🇱', // Albanês
+            'lit': '🇱🇹', 'lav': '🇱🇻', 'est': '🇪🇪',
+
+            // Europa do Sul (com códigos alternativos)
+            'gre': '🇬🇷', 'ell': '🇬🇷', // Grego
+            'tur': '🇹🇷', 'mlt': '🇲🇹',
+
+            // Ex-URSS (com códigos alternativos)
+            'ukr': '🇺🇦', 'bel': '🇧🇾', 'kaz': '🇰🇿', 'uzb': '🇺🇿',
+            'aze': '🇦🇿',
+            'arm': '🇦🇲', 'hye': '🇦🇲', // Arménio
+            'geo': '🇬🇪', 'kat': '🇬🇪', // Georgiano
+            'kir': '🇰🇬', 'tgk': '🇹🇯', 'tuk': '🇹🇲',
+
+            // Médio Oriente (com códigos alternativos)
+            'ara': '🇸🇦', 'heb': '🇮🇱',
+            'per': '🇮🇷', 'fas': '🇮🇷', // Persa
+            'urd': '🇵🇰', 'kur': '🇮🇶',
+
+            // Ásia do Sul
+            'hin': '🇮🇳', 'ben': '🇧🇩', 'pan': '🇮🇳', 'tam': '🇮🇳',
+            'tel': '🇮🇳', 'mal': '🇮🇳', 'mar': '🇮🇳', 'guj': '🇮🇳',
+            'kan': '🇮🇳', 'sin': '🇱🇰', 'nep': '🇳🇵',
+
+            // Sudeste Asiático (com códigos alternativos)
+            'tha': '🇹🇭', 'vie': '🇻🇳', 'ind': '🇮🇩',
+            'may': '🇲🇾', 'msa': '🇲🇾', // Malaio
+            'tgl': '🇵🇭',
+            'bur': '🇲🇲', 'mya': '🇲🇲', // Birmanês
+            'khm': '🇰🇭', 'lao': '🇱🇦',
+
+            // Leste Asiático
+            'mon': '🇲🇳',
+
+            // África
+            'swa': '🇰🇪', 'amh': '🇪🇹', 'hau': '🇳🇬', 'yor': '🇳🇬',
+            'ibo': '🇳🇬', 'zul': '🇿🇦', 'xho': '🇿🇦', 'afr': '🇿🇦',
+            'som': '🇸🇴',
+
+            // Línguas construídas
+            'epo': '🌍',
+
+            // Outros (com códigos alternativos)
+            'cat': '🇪🇸',
+            'baq': '🇪🇸', 'eus': '🇪🇸', // Basco
+            'glg': '🇪🇸',
+
+            // Desconhecido
+            'und': '❓'
+        };
+
+        return flags[code] || '🏳️';
+    }
+
+    /**
+     * Retorna nome do idioma em português com variante
+     */
+    getLanguageName(langCode, track = null) {
+        // Detectar variante se track fornecida
+        let variant = null;
+        if (track) {
+            const info = this.detectLanguageInfo(track);
+            langCode = info.code;
+            variant = info.variant;
+        }
+
+        const code = this.normalizeLanguageCode(langCode);
+
+        const names = {
+            // Principais idiomas (com códigos alternativos)
+            'eng': 'Inglês',
+            'por': 'Português',
+            'spa': 'Espanhol',
+            'fra': 'Francês',
+            'fre': 'Francês', // ISO 639-2/B
+            'ger': 'Alemão',
+            'deu': 'Alemão', // ISO 639-2/T
+            'ita': 'Italiano',
+            'jpn': 'Japonês',
+            'chi': 'Chinês',
+            'zho': 'Chinês',
+            'kor': 'Coreano',
+            'rus': 'Russo',
+
+            // Europa Ocidental (com códigos alternativos)
+            'dut': 'Holandês',
+            'nld': 'Holandês',
+            'swe': 'Sueco',
+            'nor': 'Norueguês',
+            'dan': 'Dinamarquês',
+            'fin': 'Finlandês',
+            'ice': 'Islandês',
+            'isl': 'Islandês',
+            'gle': 'Irlandês',
+            'wel': 'Galês',
+            'cym': 'Galês',
+            'gla': 'Gaélico Escocês',
+
+            // Europa Central e Oriental (com códigos alternativos)
+            'pol': 'Polaco',
+            'cze': 'Checo',
+            'ces': 'Checo',
+            'slo': 'Eslovaco',
+            'slk': 'Eslovaco',
+            'hun': 'Húngaro',
+            'rum': 'Romeno',
+            'ron': 'Romeno',
+            'bul': 'Búlgaro',
+            'hrv': 'Croata',
+            'srp': 'Sérvio',
+            'slv': 'Esloveno',
+            'mac': 'Macedónio',
+            'mkd': 'Macedónio',
+            'alb': 'Albanês',
+            'sqi': 'Albanês',
+            'lit': 'Lituano',
+            'lav': 'Letão',
+            'est': 'Estoniano',
+
+            // Europa do Sul (com códigos alternativos)
+            'gre': 'Grego',
+            'ell': 'Grego',
+            'tur': 'Turco',
+            'mlt': 'Maltês',
+
+            // Ex-URSS (com códigos alternativos)
+            'ukr': 'Ucraniano',
+            'bel': 'Bielorrusso',
+            'kaz': 'Cazaque',
+            'uzb': 'Uzbeque',
+            'aze': 'Azeri',
+            'arm': 'Arménio',
+            'hye': 'Arménio',
+            'geo': 'Georgiano',
+            'kat': 'Georgiano',
+            'kir': 'Quirguiz',
+            'tgk': 'Tajique',
+            'tuk': 'Turcomano',
+
+            // Médio Oriente (com códigos alternativos)
+            'ara': 'Árabe',
+            'heb': 'Hebraico',
+            'per': 'Persa',
+            'fas': 'Persa',
+            'urd': 'Urdu',
+            'kur': 'Curdo',
+
+            // Ásia do Sul
+            'hin': 'Hindi',
+            'ben': 'Bengali',
+            'pan': 'Punjabi',
+            'tam': 'Tâmil',
+            'tel': 'Telugu',
+            'mal': 'Malaiala',
+            'mar': 'Marata',
+            'guj': 'Guzerate',
+            'kan': 'Canarês',
+            'sin': 'Cingalês',
+            'nep': 'Nepalês',
+
+            // Sudeste Asiático
+            'tha': 'Tailandês',
+            'vie': 'Vietnamita',
+            'ind': 'Indonésio',
+            'may': 'Malaio',
+            'msa': 'Malaio', // ISO 639-2/T
+            'tgl': 'Tagalo',
+            'bur': 'Birmanês',
+            'mya': 'Birmanês', // ISO 639-2/T
+            'khm': 'Khmer',
+            'lao': 'Laosiano',
+
+            // Leste Asiático
+            'mon': 'Mongol',
+
+            // África
+            'swa': 'Suaíli',
+            'amh': 'Amárico',
+            'hau': 'Hauçá',
+            'yor': 'Iorubá',
+            'ibo': 'Igbo',
+            'zul': 'Zulu',
+            'xho': 'Xhosa',
+            'afr': 'Africânder',
+            'som': 'Somali',
+
+            // Línguas construídas
+            'epo': 'Esperanto',
+
+            // Outros
+            'cat': 'Catalão',
+            'baq': 'Basco',
+            'eus': 'Basco', // ISO 639-2/T
+            'glg': 'Galego',
+
+            // Desconhecido
+            'und': 'Desconhecido'
+        };
+
+        let baseName = names[code] || code.toUpperCase();
+
+        // Adicionar variante ao nome
+        if (variant) {
+            const variantNames = {
+                'BR': '(Brasil)',
+                'PT': '(Portugal)',
+                'US': '(EUA)',
+                'GB': '(Reino Unido)',
+                'LATAM': '(Latam)',
+                'ES': '(Espanha)',
+                'CA': '(Canadá)',
+                'TRAD': '(Tradicional)',
+                'SIMP': '(Simplificado)'
+            };
+            baseName += ' ' + (variantNames[variant] || '');
+        }
+
+        return baseName;
+    }
+
+    selectAllTracks() {
+        this.tracks.forEach(track => {
+            this.selectedTracks.add(track.id);
+        });
+
+        document.querySelectorAll('.track-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+
+        this.updateSelectionCount();
+    }
+
+    deselectAllTracks() {
+        this.selectedTracks.clear();
+
+        document.querySelectorAll('.track-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+
+        this.updateSelectionCount();
+    }
+
+    updateSelectionCount() {
+        const count = this.selectedTracks.size;
+        const total = this.tracks.length;
+
+        if (this.extractBtn) {
+            this.extractBtn.textContent = `Extrair ${count} Track${count !== 1 ? 's' : ''}`;
+            this.extractBtn.disabled = count === 0;
+        }
+
+        console.log(`📊 Selecionadas: ${count}/${total} tracks`);
+    }
+
+    async extractSelectedTracks() {
+        if (this.selectedTracks.size === 0) {
+            alert('Por favor selecione pelo menos uma track!');
+            return;
+        }
+
+        console.log('🚀 Extraindo tracks selecionadas:', Array.from(this.selectedTracks));
+
+        this.extractProgress.classList.remove('hidden');
+
+        try {
+            // Criar FormData
+            const formData = new FormData();
+            formData.append('mkv_file', this.currentMkvFile);
+            formData.append('track_ids', JSON.stringify(Array.from(this.selectedTracks)));
+
+            // Chamar backend para extrair
+            const response = await fetch('http://localhost:8080/api/mkv/extract', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erro HTTP: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('✅ Extração concluída:', result);
+
+            this.showExtractedFiles(result.extracted_files);
+
+            // Perguntar sobre tradução
+            this.promptTranslation(result.extracted_files);
+
+        } catch (error) {
+            console.error('❌ Erro ao extrair tracks:', error);
+            alert(`Erro na extração: ${error.message}`);
+        } finally {
+            this.extractProgress.classList.add('hidden');
+        }
+    }
+
+    showExtractedFiles(files) {
+        this.extractedList.innerHTML = '';
+
+        files.forEach(file => {
+            const item = document.createElement('div');
+            item.className = 'extracted-file-item';
+            item.innerHTML = `
+                <span class="file-icon">📄</span>
+                <span class="file-path">${file.path}</span>
+                <span class="file-size">${this.formatFileSize(file.size)}</span>
+            `;
+            this.extractedList.appendChild(item);
+        });
+    }
+
+    formatFileSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    async promptTranslation(extractedFiles) {
+        // Criar modal de confirmação
+        const proceed = confirm(
+            `✅ ${extractedFiles.length} ficheiro(s) extraído(s) com sucesso!\n\n` +
+            `Deseja traduzir estas legendas agora?`
+        );
+
+        if (proceed) {
+            console.log('🔄 Iniciando tradução...');
+
+            // Carregar primeira legenda na interface principal
+            if (extractedFiles.length > 0) {
+                const firstFile = extractedFiles[0];
+
+                // Ler o ficheiro extraído
+                try {
+                    const response = await fetch(`http://localhost:8080/api/file?path=${encodeURIComponent(firstFile.path)}`);
+                    const content = await response.text();
+
+                    // Criar um objeto File simulado
+                    const blob = new Blob([content], { type: 'text/plain' });
+                    const originalMkvName = this.currentMkvFile ? this.currentMkvFile.name.replace('.mkv', '') : 'subtitle';
+                    const file = new File([blob], `${originalMkvName}_EN.srt`, { type: 'text/plain' });
+
+                    // Trigger evento para carregar no tradutor com o ficheiro
+                    const event = new CustomEvent('loadSubtitleFile', {
+                        detail: {
+                            file: file,
+                            content: content
+                        }
+                    });
+                    document.dispatchEvent(event);
+
+                    // Fechar painel de extração e mostrar área de upload
+                    this.tracksCard.classList.add('hidden');
+                    const mkvSection = document.getElementById('mkvExtractorSection');
+                    if (mkvSection) {
+                        mkvSection.classList.add('hidden');
+                    }
+                    const uploadArea = document.querySelector('.upload-area');
+                    if (uploadArea) {
+                        uploadArea.classList.remove('hidden');
+                    }
+
+                } catch (error) {
+                    console.error('❌ Erro ao carregar ficheiro:', error);
+                    alert('Erro ao carregar ficheiro para tradução. Tente fazer download manual.');
+                }
+            }
+        } else {
+            console.log('💾 Preparando download das legendas...');
+
+            // Oferecer download dos ficheiros
+            this.offerDownload(extractedFiles);
+        }
+    }
+
+    offerDownload(extractedFiles) {
+        // Criar interface de download
+        const downloadSection = document.createElement('div');
+        downloadSection.className = 'download-section';
+        downloadSection.style.cssText = `
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 10px;
+        `;
+
+        const originalMkvName = this.currentMkvFile ? this.currentMkvFile.name.replace('.mkv', '') : 'subtitle';
+
+        downloadSection.innerHTML = `
+            <h4 style="margin-top: 0; color: #10b981;">💾 Guardar Legendas</h4>
+            <p style="margin-bottom: 15px;">Escolha onde guardar as legendas extraídas:</p>
+        `;
+
+        extractedFiles.forEach((file, index) => {
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'btn btn-secondary';
+            downloadBtn.style.cssText = 'margin: 5px; width: 100%;';
+
+            const suggestedName = index === 0
+                ? `${originalMkvName}_EN.srt`
+                : `${originalMkvName}_EN_track${file.track_id || index+1}.srt`;
+
+            downloadBtn.innerHTML = `📥 Guardar como: ${suggestedName}`;
+            downloadBtn.onclick = () => this.downloadFile(file.path, suggestedName);
+
+            downloadSection.appendChild(downloadBtn);
+        });
+
+        // Adicionar à lista de ficheiros extraídos
+        this.extractedList.appendChild(downloadSection);
+    }
+
+    async downloadFile(filePath, suggestedName) {
+        try {
+            // Buscar conteúdo do ficheiro
+            const response = await fetch(`http://localhost:8080/api/file?path=${encodeURIComponent(filePath)}`);
+            const content = await response.text();
+
+            // Criar blob e download
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = suggestedName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            console.log(`✅ Download iniciado: ${suggestedName}`);
+        } catch (error) {
+            console.error('❌ Erro no download:', error);
+            alert('Erro ao fazer download do ficheiro.');
+        }
+    }
+}
+
+// Instância global
+let mkvExtractorUI = null;
+
+function initMKVExtractor() {
+    if (!mkvExtractorUI) {
+        mkvExtractorUI = new MKVExtractorUI();
+    }
+    return mkvExtractorUI;
+}

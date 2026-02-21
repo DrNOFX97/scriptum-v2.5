@@ -289,4 +289,41 @@ def create_translation_blueprint(services: ServiceContainer, config: Config) -> 
             download_name=job.get('output_filename', 'translated.srt')
         )
 
+    @bp.route('/validate-subtitles', methods=['POST'])
+    def validate_subtitles_endpoint():
+        """
+        Validate subtitle file quality
+
+        Request: multipart/form-data
+            - subtitle: SRT file
+
+        Response: JSON with validation results
+        """
+        if 'subtitle' not in request.files:
+            logger.warning("validate-subtitles: Missing subtitle file in request")
+            return jsonify({'success': False, 'error': 'Missing subtitle file'}), HTTP_BAD_REQUEST
+
+        subtitle_file = request.files['subtitle']
+
+        try:
+            # Read subtitle content
+            content = subtitle_file.read().decode('utf-8', errors='ignore')
+
+            # Validate
+            from ..utils.subtitle_validator import validate_subtitles
+
+            results = validate_subtitles(content)
+
+            return jsonify({
+                'success': True,
+                'validation': results
+            })
+
+        except Exception as e:
+            logger.error(f"Subtitle validation error: {e}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'error': f'Validation failed: {str(e)}'
+            }), HTTP_INTERNAL_ERROR
+
     return bp

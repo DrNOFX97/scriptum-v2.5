@@ -118,6 +118,7 @@ def _register_blueprints(app: Flask, services: ServiceContainer, config: Config)
         create_config_blueprint,
         create_audio_conversion_blueprint,
         create_audio_extraction_blueprint,
+        create_chunked_upload_blueprint,
     )
 
     # Register blueprints
@@ -130,6 +131,7 @@ def _register_blueprints(app: Flask, services: ServiceContainer, config: Config)
         ('config', create_config_blueprint(services, config)),
         ('audio_conversion', create_audio_conversion_blueprint(services, config)),
         ('audio_extraction', create_audio_extraction_blueprint(services, config)),
+        ('chunked_upload', create_chunked_upload_blueprint()),
     ]
 
     for name, blueprint in blueprints:
@@ -174,6 +176,10 @@ def print_banner(config: Config, services: ServiceContainer) -> None:
     print("  GET  /download/<filename>          - Download file")
     print("  POST /sync                         - Sync subtitles (MLX Whisper)")
     print("  POST /translate                    - Translate subtitles (Gemini)")
+    print("  GET  /translate-status/<id>        - Get translation job status")
+    print("  GET  /translate-download/<id>      - Download translated subtitle")
+    print("  POST /validate-subtitles           - Validate subtitle quality")
+    print("  POST /detect-language              - Detect subtitle language")
     print("  GET  /config                       - Get configuration")
     print("  POST /config                       - Update configuration")
     print()

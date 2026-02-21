@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+.tox/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Data files
+uploads/
+temp/
+tmp/
+*.log
+*.sqlite
+*.db
+
+# Large files
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.srt
+*.sub
+*.rar
+*.zip

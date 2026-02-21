@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradutor de Legendas SRT - EN para PT-PT</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Tradutor de Legendas</h1>
+            <p id="headerDescription">Traduza legendas SRT de qualquer idioma para Português (PT-PT)</p>
+        </header>
+
+        <main>
+            <!-- Secção de Upload -->
+            <div id="uploadSection" class="section">
+                <div class="upload-area">
+                    <label for="srtFile" class="file-label" id="fileLabel">
+                        <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+                            <path d="M30 10v35M30 45l-12-12M30 45l12-12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                            <path d="M15 50h30" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                        </svg>
+                        <span id="fileName">Clique ou arraste o ficheiro SRT aqui</span>
+                        <span class="file-hint">Suporta ficheiros .srt ou .mkv</span>
+                    </label>
+                    <input type="file" id="srtFile" accept=".srt,.mkv" hidden>
+                </div>
+
+                <!-- MKV Extractor (visível quando ficheiro MKV for selecionado) -->
+                <div id="mkvExtractorSection" class="section hidden">
+                    <div class="section-header">
+                        <h2>📦 Extrator de Legendas MKV</h2>
+                    </div>
+
+                    <div class="mkv-file-info">
+                        <span class="label">Ficheiro:</span>
+                        <span id="mkvFileName" class="value"></span>
+                        <button id="analyzeMkvBtn" class="btn btn-secondary">🔍 Analisar Legendas</button>
+                    </div>
+                </div>
+
+                <!-- Subtitle Tracks List -->
+                <div id="subtitleTracksCard" class="subtitle-tracks-card hidden">
+                    <div class="tracks-header">
+                        <h3>📋 Tracks de Legendas Disponíveis</h3>
+                        <div class="tracks-actions">
+                            <button id="selectAllTracksBtn" class="btn-link-small">Selecionar todas</button>
+                            <button id="deselectAllTracksBtn" class="btn-link-small">Desselecionar todas</button>
+                        </div>
+                    </div>
+
+                    <div id="subtitleTracksList" class="tracks-list"></div>
+
+                    <div class="tracks-footer">
+                        <button id="extractSubtitlesBtn" class="btn btn-primary" disabled>Extrair 0 Tracks</button>
+                    </div>
+                </div>
+
+                <!-- Extraction Progress -->
+                <div id="extractionProgress" class="extraction-progress hidden">
+                    <div class="progress-spinner"></div>
+                    <p>Extraindo legendas...</p>
+                </div>
+
+                <!-- Extracted Files List -->
+                <div id="extractedSubtitlesList" class="extracted-files-list"></div>
+            </div>
+
+            <!-- Secção de Preview do Ficheiro -->
+            <div id="filePreviewSection" class="section hidden">
+                <div class="section-header">
+                    <h2>📄 Ficheiro Carregado</h2>
+                    <button id="changeFileBtn" class="btn-link">Alterar ficheiro</button>
+                </div>
+                <div class="file-info">
+                    <div class="info-row">
+                        <span class="label">Nome:</span>
+                        <span id="fileNameDisplay" class="value"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Tamanho:</span>
+                        <span id="fileSizeDisplay" class="value"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Total de legendas:</span>
+                        <span id="subtitleCountDisplay" class="value"></span>
+                    </div>
+                </div>
+                <!-- Movie Metadata Card -->
+                <div id="movieMetadataCard" class="movie-metadata-card hidden">
+                    <div class="metadata-header">
+                        <h3>📽️ Informações do Filme</h3>
+                        <button id="refreshMetadataBtn" class="btn-icon-small" title="Recarregar metadados">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M13.65 2.35A7.95 7.95 0 008 0C3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="metadata-content">
+                        <div class="metadata-poster">
+                            <img id="moviePoster" src="" alt="Poster" />
+                            <div class="poster-placeholder">🎬</div>
+                        </div>
+
+                        <div class="metadata-info">
+                            <h4 id="movieTitle">Carregando...</h4>
+                            <div class="movie-details">
+                                <span id="movieRating" class="detail-item">⭐ -</span>
+                                <span id="movieYear" class="detail-item">📅 -</span>
+                                <span id="movieRuntime" class="detail-item">⏱️ -</span>
+                            </div>
+                            <div id="movieGenres" class="movie-genres"></div>
+                            <p id="movieOverview" class="movie-overview"></p>
+                        </div>
+                    </div>
+
+                    <div id="movieCastSection" class="cast-section hidden">
+                        <h4>👥 Personagens Principais</h4>
+                        <div id="movieCast" class="cast-list"></div>
+                    </div>
+
+                    <div class="metadata-options">
+                        <label class="option-label">
+                            <input type="checkbox" id="preserveCharacterNames" checked>
+                            <span>Preservar nomes de personagens na tradução</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="checkbox" id="useMovieContext" checked>
+                            <span>Aplicar contexto do filme à tradução</span>
+                        </label>
+                    </div>
+
+                    <div id="glossaryPreview" class="glossary-preview hidden">
+                        <div class="glossary-header">
+                            <span>📝 Glossário: <strong id="glossaryCount">0</strong> termos</span>
+                            <button id="viewGlossaryBtn" class="btn-link-small">Ver detalhes</button>
+                        </div>
+                        <div id="glossaryTerms" class="glossary-terms hidden"></div>
+                    </div>
+                </div>
+
+                <div class="preview-box">
+                    <h3>Primeiras 5 legendas:</h3>
+                    <div id="originalPreview" class="subtitle-preview"></div>
+                </div>
+                <button id="startTranslationBtn" class="btn-primary">
+                    🌐 Iniciar Tradução
+                </button>
+            </div>
+
+            <!-- Secção de Progresso -->
+            <div id="progressSection" class="section hidden">
+                <div class="section-header">
+                    <h2>⚙️ Tradução em Curso</h2>
+                    <button id="toggleOptionsBtn" class="btn-icon" title="Opções de Visualização">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 6a1 1 0 100-2 1 1 0 000 2zM10 11a1 1 0 100-2 1 1 0 000 2zM10 16a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Opções de Visualização -->
+                <div id="viewOptions" class="view-options hidden">
+                    <div class="option-group">
+                        <label class="option-label">
+                            <input type="checkbox" id="showLiveStream" checked>
+                            <span>Live Streaming de Traduções</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="checkbox" id="showStats" checked>
+                            <span>Estatísticas Detalhadas</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="checkbox" id="showPerformance" checked>
+                            <span>Gráfico de Performance</span>
+                        </label>
+                        <label class="option-label">
+                            <input type="checkbox" id="autoScroll" checked>
+                            <span>Auto-scroll em Live Stream</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Barra de Progresso Principal -->
+                <div class="progress-container">
+                    <div class="progress-header">
+                        <div class="progress-title">
+                            <span class="pulse-dot"></span>
+                            <span>Progresso Geral</span>
+                        </div>
+                        <div class="eta-info">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M8 4v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            <span id="etaTime">Calculando...</span>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                        <span class="progress-percentage" id="progressPercentage">0%</span>
+                    </div>
+                    <div class="progress-details">
+                        <span id="progressDetails">0 de 0 legendas traduzidas</span>
+                        <span id="speedInfo">0 legendas/min</span>
+                    </div>
+                </div>
+
+                <!-- Estatísticas em Grid -->
+                <div id="statsGrid" class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-content">
+                            <span class="stat-label">Lote Atual</span>
+                            <span id="batchInfo" class="stat-value">0/0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📝</div>
+                        <div class="stat-content">
+                            <span class="stat-label">Legendas</span>
+                            <span id="subtitleInfo" class="stat-value">0/0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-content">
+                            <span class="stat-label">Velocidade</span>
+                            <span id="speedStat" class="stat-value">0/s</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-content">
+                            <span class="stat-label">Tempo Decorrido</span>
+                            <span id="elapsedTime" class="stat-value">00:00</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-content">
+                            <span class="stat-label">Precisão</span>
+                            <span id="accuracyStat" class="stat-value">100%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔄</div>
+                        <div class="stat-content">
+                            <span class="stat-label">Retentativas</span>
+                            <span id="retryStat" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Performance -->
+                <div id="performanceChart" class="performance-chart">
+                    <div class="chart-header">
+                        <h3>📊 Performance em Tempo Real</h3>
+                        <div class="chart-legend">
+                            <span class="legend-item"><span class="legend-dot speed"></span>Velocidade</span>
+                            <span class="legend-item"><span class="legend-dot progress"></span>Progresso</span>
+                        </div>
+                    </div>
+                    <canvas id="perfCanvas" width="800" height="200"></canvas>
+                </div>
+
+                <!-- Live Stream de Traduções -->
+                <div id="livePreview" class="live-preview">
+                    <div class="live-header">
+                        <h3>🔴 Live Stream de Traduções</h3>
+                        <button id="pauseStreamBtn" class="btn-mini">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                <rect x="3" y="2" width="3" height="10" fill="currentColor" rx="1"/>
+                                <rect x="8" y="2" width="3" height="10" fill="currentColor" rx="1"/>
+                            </svg>
+                            Pausar
+                        </button>
+                    </div>
+                    <div id="liveTranslations" class="live-translations"></div>
+                </div>
+            </div>
+
+            <!-- Secção de Resultado -->
+            <div id="resultSection" class="section hidden">
+                <div class="success-banner">
+                    <svg width="70" height="70" viewBox="0 0 70 70" fill="none">
+                        <circle cx="35" cy="35" r="32" stroke="#4CAF50" stroke-width="4"/>
+                        <path d="M20 35l12 12 18-24" stroke="#4CAF50" stroke-width="4" stroke-linecap="round"/>
+                    </svg>
+                    <h2>✅ Tradução Concluída com Sucesso!</h2>
+                </div>
+
+                <div class="result-info">
+                    <div class="info-row">
+                        <span class="label">Ficheiro original:</span>
+                        <span id="originalFileName" class="value"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Legendas traduzidas:</span>
+                        <span id="translatedCount" class="value"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Ficheiro final:</span>
+                        <span id="finalFileName" class="value"></span>
+                    </div>
+                </div>
+
+                <div class="preview-comparison">
+                    <div class="preview-column">
+                        <h3 id="originalLanguageLabel">Original</h3>
+                        <div id="originalFinalPreview" class="subtitle-preview"></div>
+                    </div>
+                    <div class="preview-column">
+                        <h3>🇵🇹 Traduzido (PT-PT)</h3>
+                        <div id="translatedPreview" class="subtitle-preview"></div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="downloadBtn" class="btn-primary btn-large">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 3v14M12 17l-5-5M12 17l5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Descarregar Legendas Traduzidas
+                    </button>
+                    <button id="newTranslationBtn" class="btn-secondary">
+                        🔄 Nova Tradução
+                    </button>
+                </div>
+            </div>
+
+            <!-- Secção de Erro -->
+            <div id="errorSection" class="section hidden">
+                <div class="error-banner">
+                    <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+                        <circle cx="30" cy="30" r="28" stroke="#f44336" stroke-width="3"/>
+                        <path d="M20 20l20 20M40 20l-20 20" stroke="#f44336" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                    <h2>❌ Erro</h2>
+                </div>
+                <p id="errorMessage" class="error-message"></p>
+                <button id="retryBtn" class="btn-secondary">Tentar Novamente</button>
+            </div>
+        </main>
+
+        <footer>
+            <p id="footerDescription">Mantém os timeframes originais • Tradução multilíngue → PT-PT • Powered by Google Gemini</p>
+            <button id="clearApiKeyBtn" class="btn-link small">Alterar Chave API</button>
+        </footer>
+    </div>
+
+    <script src="srt-parser.js?v=2"></script>
+    <script src="translator.js?v=2"></script>
+    <script src="progress-manager.js?v=2"></script>
+    <script src="movie-metadata.js?v=2"></script>
+    <script src="language-detector.js?v=2"></script>
+    <script src="mkv-extractor.js?v=2"></script>
+    <script src="app.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="pt-PT">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scriptum 3.0</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark"></div>
+          <div>
+            <h1>Scriptum 3.0</h1>
+            <p data-pt="Estudio de Legendas" data-en="Subtitle Studio">Estudio de Legendas</p>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="nav-link" href="#project" data-section="project" data-pt="Projeto" data-en="Project">Projeto</a>
+          <a class="nav-link active" href="#translate" data-section="translate" data-pt="Traducao" data-en="Translation">Traducao</a>
+          <a class="nav-link" href="#edit" data-section="edit" data-pt="Edicao" data-en="Editing">Edicao</a>
+          <a class="nav-link" href="#sync" data-section="sync" data-pt="Sincronizar" data-en="Sync">Sincronizar</a>
+          <a class="nav-link" href="#search" data-section="search" data-pt="Pesquisar" data-en="Search">Pesquisar</a>
+          <a class="nav-link" href="#video" data-section="video" data-pt="Ferramentas de Video" data-en="Video Tools">Ferramentas de Video</a>
+          <a class="nav-link" href="#settings" data-section="settings" data-pt="Definicoes" data-en="Settings">Definicoes</a>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="status-dot" id="healthDot"></div>
+          <div>
+            <p class="label" data-pt="Estado do backend" data-en="Backend status">Estado do backend</p>
+            <p class="value" id="healthText" data-pt="A verificar..." data-en="Checking...">A verificar...</p>
+            <p class="muted" id="diagText"></p>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h2 data-pt="Fluxo Profissional de Legendas" data-en="Professional Subtitle Workflow">Fluxo Profissional de Legendas</h2>
+            <p data-pt="Traducao primeiro, com edicao avancada e automacao." data-en="Translation-first workflow with advanced editing and automation.">Traducao primeiro, com edicao avancada e automacao.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn ghost" id="openDocs" data-pt="Docs" data-en="Docs">Docs</button>
+            <button class="btn ghost" id="sidebarToggle" data-pt="Esconder Menu" data-en="Hide Menu">Esconder Menu</button>
+            <button class="btn ghost lang-toggle" id="langToggle">PT</button>
+            <button class="btn primary" id="newSession" data-pt="Nova Sessao" data-en="New Session">Nova Sessao</button>
+          </div>
+        </header>
+
+        <section class="hero">
+          <div class="hero-content">
+            <h3 data-pt="Traduza com contexto, edite com precisao, sincronize com confiança." data-en="Translate with context, edit with precision, sync with confidence.">Traduza com contexto, edite com precisao, sincronize com confiança.</h3>
+            <p data-pt="O Scriptum 3.0 traz um fluxo profissional de legendas num unico workspace moderno. Comece pela traducao, refine com ferramentas de edicao e finalize com MLX Whisper." data-en="Scriptum 3.0 brings a studio-grade subtitle pipeline into a single, modern workspace. Start with translation, refine with editing tools, then synchronize using MLX Whisper.">
+              O Scriptum 3.0 traz um fluxo profissional de legendas num unico workspace moderno. Comece pela traducao, refine com ferramentas de edicao e finalize com MLX Whisper.
+            </p>
+            <div class="hero-actions">
+              <button class="btn primary" data-jump="translate" data-pt="Comecar a Traduzir" data-en="Start Translating">Comecar a Traduzir</button>
+              <button class="btn ghost" data-jump="edit" data-pt="Abrir Editor" data-en="Open Editor">Abrir Editor</button>
+            </div>
+          </div>
+          <div class="hero-card">
+            <div class="metric">
+              <span class="metric-label" data-pt="Modo Principal" data-en="Primary Mode">Modo Principal</span>
+              <span class="metric-value" data-pt="Traducao" data-en="Translation">Traducao</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label" data-pt="Modo Secundario" data-en="Secondary Mode">Modo Secundario</span>
+              <span class="metric-value" data-pt="Edicao + Sync" data-en="Editing + Sync">Edicao + Sync</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label" data-pt="Pipeline" data-en="Pipeline">Pipeline</span>
+              <span class="metric-value" data-pt="Video + Legendas" data-en="Video + Subtitles">Video + Legendas</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="project" class="panel">
+          <div class="panel-header">
+            <div>
+              <h3 data-pt="Projeto (Fluxo por Estados)" data-en="Project (State-Based Flow)">Projeto (Fluxo por Estados)</h3>
+              <p data-pt="O utilizador escolhe intenções, o sistema automatiza." data-en="Users choose intentions, the system automates.">O utilizador escolhe intenções, o sistema automatiza.</p>
+            </div>
+          </div>
+          <div class="project-grid">
+            <div class="card project-filebar">
+              <div class="filebar-group">
+                <label data-pt="Video (MKV/MP4)" data-en="Video (MKV/MP4)">Video (MKV/MP4)</label>
+                <div class="filebar-actions">
+                  <input type="file" id="projectVideoFile" accept="video/*,.mkv,.avi,.mov,.wmv,.flv,.webm" />
+                  <button class="btn ghost" id="projectVideoPick" data-pt="Carregar" data-en="Load">Carregar</button>
+                </div>
+              </div>
+              <div class="filebar-group">
+                <label data-pt="Legenda (SRT)" data-en="Subtitle (SRT)">Legenda (SRT)</label>
+                <div class="filebar-actions">
+                  <input type="file" id="projectSubtitleFile" accept=".srt" />
+                  <button class="btn ghost" id="projectSubtitlePick" data-pt="Carregar" data-en="Load">Carregar</button>
+                </div>
+              </div>
+              <div class="filebar-actions">
+                <button class="btn ghost" id="projectExtract" data-pt="Extrair do MKV" data-en="Extract from MKV">Extrair do MKV</button>
+                <button class="btn ghost" id="projectSearch" data-pt="Pesquisar OpenSubtitles" data-en="Search OpenSubtitles">Pesquisar OpenSubtitles</button>
+              </div>
+            </div>
+
+            <div class="project-top">
+              <div class="card info-card">
+                <h4 data-pt="Informacoes do Filme" data-en="Film Information">Informacoes do Filme</h4>
+                <div class="movie-card" id="movieInfoBlock">
+                  <p class="muted" data-pt="TMDB nao carregado." data-en="TMDB not loaded.">TMDB nao carregado.</p>
+                </div>
+              </div>
+              <div class="card info-card">
+                <h4 data-pt="Informacoes do Video" data-en="Video Information">Informacoes do Video</h4>
+                <div class="info-block" id="videoInfoBlock">
+                  <p class="muted" data-pt="Nenhum video analisado." data-en="No video analyzed.">Nenhum video analisado.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="project-main">
+              <div class="card player-card">
+                <div class="player-header">
+                  <div>
+                    <h4 data-pt="Leitor + Editor Integrados" data-en="Integrated Player + Editor">Leitor + Editor Integrados</h4>
+                    <p class="muted" id="projectStateLabel" data-pt="Estado: video nao carregado" data-en="State: video not loaded">Estado: video nao carregado</p>
+                  </div>
+                  <div class="state-badges" id="stateBadges"></div>
+                </div>
+                <div class="player-area">
+                  <video id="projectVideo" controls></video>
+                  <div class="subtitle-overlay" id="subtitleOverlay">—</div>
+                  <div class="player-screen" id="playerScreen">
+                    <div class="player-message" id="playerMessage" data-pt="Carregue um filme para começar." data-en="Load a film to get started.">Carregue um filme para começar.</div>
+                  </div>
+                  <div class="player-loading hidden" id="playerLoading">
+                    <div class="spinner"></div>
+                    <div class="loading-text" data-pt="A preparar o vídeo para reprodução. Isto pode levar um minuto." data-en="Preparing video for playback. This can take about a minute.">A preparar o vídeo para reprodução. Isto pode levar um minuto.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card editor-card">
+                <div class="editor-header">
+                  <h4 data-pt="Editor de Legendas (Live)" data-en="Subtitle Editor (Live)">Editor de Legendas (Live)</h4>
+                  <div class="editor-tools">
+                    <button class="btn ghost" id="editorUndoAll" data-pt="Undo bloco" data-en="Undo block">Undo bloco</button>
+                    <button class="btn ghost" id="editorRedoAll" data-pt="Redo bloco" data-en="Redo block">Redo bloco</button>
+                    <button class="btn ghost" id="editorNormalizeAll" data-pt="Normalizar" data-en="Normalize">Normalizar</button>
+                  </div>
+                </div>
+                <div class="editor-list" id="editorList"></div>
+              </div>
+            </div>
+
+            <div class="project-tools">
+              <div class="card">
+                <h4 data-pt="Sincronizacao e Ajustes" data-en="Sync & Fine Tuning">Sincronizacao e Ajustes</h4>
+                <div class="field">
+                  <label data-pt="Offset global (s)" data-en="Global offset (s)">Offset global (s)</label>
+                  <div class="inline-input">
+                    <input type="number" id="projectOffset" step="0.1" value="0" />
+                    <button class="btn ghost" id="projectApplyOffset" data-pt="Aplicar" data-en="Apply">Aplicar</button>
+                  </div>
+                </div>
+                <div class="field">
+                  <label data-pt="Ajuste fino" data-en="Fine adjustment">Ajuste fino</label>
+                  <input type="range" id="projectOffsetSlider" min="-5" max="5" step="0.1" value="0" />
+                </div>
+                <div class="field-grid">
+                  <button class="btn primary" id="projectSync" data-pt="Auto Sync" data-en="Auto Sync">Auto Sync</button>
+                  <button class="btn primary" id="projectTranslate" data-pt="Traduzir Legenda" data-en="Translate Subtitle">Traduzir Legenda</button>
+                </div>
+                <div class="field-grid">
+                  <div class="field">
+                    <label data-pt="Max linhas por legenda" data-en="Max lines per subtitle">Max linhas por legenda</label>
+                    <input type="number" id="projectMaxLines" value="2" min="1" max="4" />
+                  </div>
+                  <div class="field">
+                    <label data-pt="Max caracteres por linha" data-en="Max characters per line">Max caracteres por linha</label>
+                    <input type="number" id="projectMaxChars" value="42" min="20" max="60" />
+                  </div>
+                </div>
+                <div class="field-grid">
+                  <button class="btn ghost" id="projectReflow" data-pt="Melhorar Quebras de Linha" data-en="Improve Line Breaks">Melhorar Quebras de Linha</button>
+                  <button class="btn ghost" id="projectReflowDownload" data-pt="Corrigir e Descarregar" data-en="Fix & Download">Corrigir e Descarregar</button>
+                </div>
+                <div class="progress translate-progress">
+                  <div class="progress-bar" id="projectTranslateProgress" style="width: 0%"></div>
+                </div>
+                <div class="status" id="projectTranslateStats"></div>
+              </div>
+              <div class="card">
+                <h4 data-pt="Legendas Embutidas" data-en="Embedded Subtitles">Legendas Embutidas</h4>
+                <div class="embedded-list" id="embeddedList">
+                  <p class="muted" data-pt="Nenhuma legenda extraida." data-en="No subtitles extracted.">Nenhuma legenda extraida.</p>
+                </div>
+              </div>
+              <div class="card">
+                <h4 data-pt="Versoes de Legenda" data-en="Subtitle Versions">Versoes de Legenda</h4>
+                <div class="versions" id="subtitleVersions"></div>
+                <div class="field-grid">
+                  <button class="btn ghost" id="exportActive" data-pt="Exportar Atual" data-en="Export Current">Exportar Atual</button>
+                  <button class="btn ghost" id="exportAll" data-pt="Exportar Todas" data-en="Export All">Exportar Todas</button>
+                </div>
+              </div>
+              <div class="card">
+                <h4 data-pt="Diagnosticos do Backend" data-en="Backend Diagnostics">Diagnosticos do Backend</h4>
+                <div class="diagnostics" id="diagnosticsList"></div>
+              </div>
+              <div class="card">
+                <h4 data-pt="Resumo do Estado" data-en="State Summary">Resumo do Estado</h4>
+                <ul class="state-list" id="stateList"></ul>
+              </div>
+              <div class="card">
+                <h4 data-pt="FSM Debug" data-en="FSM Debug">FSM Debug</h4>
+                <pre class="fsm-debug" id="fsmDebug"></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="translate" class="panel">
+          <div class="panel-header">
+            <div>
+              <h3 data-pt="Estudio de Traducao" data-en="Translation Studio">Estudio de Traducao</h3>
+              <p data-pt="Foco em traducao precisa e com contexto." data-en="Focus on accurate, context-aware subtitle translation.">Foco em traducao precisa e com contexto.</p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn ghost" id="translateReset" data-pt="Repor" data-en="Reset">Repor</button>
+            </div>
+          </div>
+          <div class="panel-grid">
+            <div class="card">
+              <h4 data-pt="Entrada" data-en="Input">Entrada</h4>
+              <div class="field">
+                <label data-pt="Ficheiro de legendas" data-en="Subtitle file">Ficheiro de legendas</label>
+                <input type="file" id="translateFile" accept=".srt,.vtt,.ass,.ssa" />
+              </div>
+              <div class="field">
+                <label data-pt="Contexto (filme ou episodio)" data-en="Context (movie or episode)">Contexto (filme ou episodio)</label>
+                <input type="text" id="translateContext" placeholder="Exemplo: Dune Part Two" data-pt-placeholder="Exemplo: Dune Part Two" data-en-placeholder="Example: Dune Part Two" />
+              </div>
+              <div class="field-grid">
+                <div class="field">
+                  <label data-pt="Origem" data-en="Source">Origem</label>
+                  <select id="translateSource">
+                    <option value="en">English</option>
+                    <option value="pt">Portuguese (PT)</option>
+                    <option value="pt-BR">Portuguese (BR)</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label data-pt="Destino" data-en="Target">Destino</label>
+                  <select id="translateTarget">
+                    <option value="pt">Portuguese (PT)</option>
+                    <option value="pt-BR">Portuguese (BR)</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field-grid">
+                <div class="field">
+                  <label data-pt="Tom" data-en="Tone">Tom</label>
+                  <select id="translateTone">
+                    <option value="casual">Casual</option>
+                    <option value="formal">Formal</option>
+                    <option value="technical">Tecnico</option>
+                  </select>
+                </div>
+                <div class="field toggle">
+                  <label data-pt="Correcao automatica de formatacao (sempre ativa)" data-en="Auto format correction (always on)">Correcao automatica de formatacao (sempre ativa)</label>
+                </div>
+              </div>
+              <button class="btn primary" id="translateStart" data-pt="Traduzir" data-en="Translate">Traduzir</button>
+              <div class="status" id="translateStatus" data-pt="Pronto." data-en="Ready.">Pronto.</div>
+              <div class="progress translate-progress">
+                <div class="progress-bar" id="translateProgressBar" style="width: 0%"></div>
+              </div>
+              <div class="status" id="translateStats"></div>
+            </div>
+            <div class="card">
+              <h4 data-pt="Saida" data-en="Output">Saida</h4>
+              <div class="output-panel" id="translateOutput">
+                <p data-pt="O ficheiro traduzido fica pronto aqui." data-en="Translated file will be ready for download here.">O ficheiro traduzido fica pronto aqui.</p>
+              </div>
+              <button class="btn ghost" id="translateDownload" disabled>Download</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="edit" class="panel">
+          <div class="panel-header">
+            <div>
+              <h3 data-pt="Suite de Edicao" data-en="Editing Suite">Suite de Edicao</h3>
+              <p data-pt="Limpar, ajustar e refinar legendas antes da entrega final." data-en="Clean, adjust, and refine subtitles before final delivery.">Limpar, ajustar e refinar legendas antes da entrega final.</p>
+            </div>
+            <div class="panel-actions">
+              <button class="btn ghost" id="editorLoadDemo" data-pt="Carregar Exemplo" data-en="Load Example">Carregar Exemplo</button>
+              <button class="btn ghost" id="editorReset" data-pt="Repor" data-en="Reset">Repor</button>
+            </div>
+          </div>
+          <div class="panel-grid">
+            <div class="card">
+              <h4 data-pt="Editor" data-en="Editor">Editor</h4>
+              <div class="field">
+                <label data-pt="Ficheiro de legendas" data-en="Subtitle file">Ficheiro de legendas</label>
+                <input type="file" id="editorFile" accept=".srt" />
+              </div>
+              <textarea id="editorArea" class="editor" placeholder="Cole ou carregue o SRT aqui" data-pt-placeholder="Cole ou carregue o SRT aqui" data-en-placeholder="Paste or load your SRT here"></textarea>
+              <div class="editor-actions">
+                <button class="btn ghost" id="editorRenumber" data-pt="Renum." data-en="Renumber">Renum.</button>
+                <button class="btn ghost" id="editorNormalize" data-pt="Normalizar" data-en="Normalize">Normalizar</button>
+                <button class="btn ghost" id="editorFindReplace" data-pt="Procurar/Subst." data-en="Find/Replace">Procurar/Subst.</button>
+              </div>
+            </div>
+            <div class="card">
+              <h4 data-pt="Tempo e Ferramentas" data-en="Timing & Tools">Tempo e Ferramentas</h4>
+              <div class="field">
+                <label data-pt="Offset global (segundos)" data-en="Global offset (seconds)">Offset global (segundos)</label>
+                <div class="inline-input">
+                  <input type="number" id="editorOffset" step="0.1" value="0" />
+                  <button class="btn ghost" id="editorApplyOffset" data-pt="Aplicar" data-en="Apply">Aplicar</button>
+                </div>
+              </div>
+              <div class="field">
+                <label data-pt="Procurar" data-en="Find">Procurar</label>
+                <input type="text" id="editorFind" placeholder="Texto a procurar" data-pt-placeholder="Texto a procurar" data-en-placeholder="Text to find" />
+              </div>
+              <div class="field">
+                <label data-pt="Substituir" data-en="Replace">Substituir</label>
+                <input type="text" id="editorReplace" placeholder="Substituicao" data-pt-placeholder="Substituicao" data-en-placeholder="Replacement" />
+              </div>
+              <button class="btn ghost" id="editorDownload" data-pt="Download SRT" data-en="Download SRT">Download SRT</button>
+              <div class="status" id="editorStatus" data-pt="Pronto." data-en="Ready.">Pronto.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="sync" class="panel">
+          <div class="panel-header">
+            <div>
+              <h3 data-pt="Sincronizacao Automatica" data-en="Automatic Sync">Sincronizacao Automatica</h3>
+              <p data-pt="Alinhar legendas ao audio com MLX Whisper." data-en="Align subtitles to audio using MLX Whisper.">Alinhar legendas ao audio com MLX Whisper.</p>
+            </div>
+          </div>
+          <div class="panel-grid">
+            <div class="card">
+              <h4 data-pt="Entradas" data-en="Inputs">Entradas</h4>
+              <div class="field">
+                <label data-pt="Ficheiro de video" data-en="Video file">Ficheiro de video</label>
+                <input type="file" id="syncVideo" accept="video/*,.mkv,.avi,.mov,.wmv,.flv,.webm" />
+              </div>
+              <div class="field">
+                <label data-pt="Ficheiro de legendas" data-en="Subtitle file">Ficheiro de legendas</label>
+                <input type="file" id="syncSubtitle" accept=".srt" />
+              </div>
+              <button class="btn primary" id="syncStart" data-pt="Iniciar Sync" data-en="Start Sync">Iniciar Sync</button>
+              <div class="progress" id="syncProgress">
+                <div class="progress-bar" style="width: 0%"></div>
+              </div>
+              <div class="status" id="syncStatus" data-pt="Pronto." data-en="Ready.">Pronto.</div>
+            </div>
+            <div class="card">
+              <h4 data-pt="Resultado" data-en="Result">Resultado</h4>
+              <div class="output-panel" id="syncOutput">
+                <p data-pt="O ficheiro sincronizado fica pronto aqui." data-en="Synced file will be ready for download here.">O ficheiro sincronizado fica pronto aqui.</p>
+              </div>
+              <button class="btn ghost" id="syncDownload" disabled>Download</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="search" class="panel">
+          <div class="panel-header">
+            <div>
+              <h3 data-pt="Pesquisa de Legendas" data-en="Subtitle Search">Pesquisa de Legendas</h3>
+              <p data-pt="Pesquisar no catalogo OpenSubtitles." data-en="Search the OpenSubtitles catalogue.">Pesquisar no catalogo OpenSubtitles.</p>
+            </div>
+          </div>
+          <div class="panel-grid">
+            <div class="card">
+              <h4 data-pt="Pesquisar" data-en="Search">Pesquisar</h4>
+              <div class="field">
+                <label data-pt="Pesquisa" data-en="Query">Pesquisa</label>
+                <input type="text" id="searchQuery" placeholder="Titulo do filme ou episodio" data-pt-placeholder="Titulo do filme ou episodio" data-en-placeholder="Movie title or series episode" />
+              </div>
+              <div class="field">
+                <label data-pt="Idioma" data-en="Language">Idioma</label>
+                <select id="searchLanguage">
+                  <option value="pt">Portuguese (PT)</option>
+                  <option value="pt-BR">Portuguese (BR)</option>
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                </select>
+              </div>
+              <button class="btn primary" id="searchStart" data-pt="Pesquisar" data-en="Search">Pesquisar</button>
+              <div class="status" id="searchStatus" data-pt="Pronto." data-en="Ready.">Pronto.</div>
+            </div>
+            <div class="card">
+              <h4 data-pt="Resultados" data-en="Results">Resultados</h4>
+              <div class="results" id="searchResults"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="video" class="panel">
+          <div class="panel-header">
+            <div>
+              <h3 data-pt="Ferramentas de Video" data-en="Video Tools">Ferramentas de Video</h3>
+              <p data-pt="Analisar, remux, converter e extrair legendas embutidas." data-en="Analyze, remux, convert, and extract embedded subtitles.">Analisar, remux, converter e extrair legendas embutidas.</p>
+            </div>
+          </div>
+          <div class="panel-grid">
+            <div class="card">
+              <h4 data-pt="Analisar" data-en="Analyze">Analisar</h4>
+              <div class="field">
+                <label data-pt="Ficheiro de video" data-en="Video file">Ficheiro de video</label>
+                <input type="file" id="analyzeVideo" accept="video/*,.mkv,.avi,.mov,.wmv,.flv,.webm" />
+              </div>
+              <button class="btn primary" id="analyzeStart" data-pt="Analisar Video" data-en="Analyze Video">Analisar Video</button>
+              <div class="output-panel" id="analyzeOutput"></div>
+            </div>
+            <div class="card">
+              <h4 data-pt="Converter e Extrair" data-en="Convert & Extract">Converter e Extrair</h4>
+              <div class="field">
+                <label data-pt="Ficheiro MKV" data-en="MKV file">Ficheiro MKV</label>
+                <input type="file" id="toolVideo" accept=".mkv" />
+              </div>
+              <div class="field-grid">
+                <button class="btn ghost" id="remuxStart" data-pt="Remux Rapido" data-en="Fast Remux">Remux Rapido</button>
+                <button class="btn ghost" id="convertStart" data-pt="Converter MP4" data-en="Convert MP4">Converter MP4</button>
+              </div>
+              <div class="field">
+                <label data-pt="Qualidade" data-en="Quality">Qualidade</label>
+                <select id="convertQuality">
+                  <option value="balanced">Balanced</option>
+                  <option value="fast">Fast</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <button class="btn ghost" id="extractStart" data-pt="Extrair Legendas" data-en="Extract Subtitles">Extrair Legendas</button>
+              <div class="output-panel" id="extractOutput"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="settings" class="panel">
+          <div class="panel-header">
+            <div>
+              <h3 data-pt="Definicoes" data-en="Settings">Definicoes</h3>
+              <p data-pt="Configurar backend e preferencias de sessao." data-en="Configure backend endpoint and session preferences.">Configurar backend e preferencias de sessao.</p>
+            </div>
+          </div>
+          <div class="panel-grid">
+            <div class="card">
+              <h4 data-pt="Backend" data-en="Backend">Backend</h4>
+              <div class="field">
+                <label>API Base URL</label>
+                <input type="text" id="apiBase" value="http://localhost:5001" />
+              </div>
+              <button class="btn ghost" id="saveSettings" data-pt="Guardar" data-en="Save">Guardar</button>
+              <div class="status" id="settingsStatus" data-pt="Pronto." data-en="Ready.">Pronto.</div>
+            </div>
+            <div class="card">
+              <h4 data-pt="Sessao" data-en="Session">Sessao</h4>
+              <p class="muted" data-pt="Este prototipo guarda apenas definicoes locais." data-en="This prototype stores only local settings.">Este prototipo guarda apenas definicoes locais.</p>
+              <div class="field">
+                <label data-pt="Download automatico" data-en="Auto-download files">Download automatico</label>
+                <div class="toggle">
+                  <input type="checkbox" id="autoDownload" checked />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/xstate@5/dist/xstate.umd.min.js"></script>
+    <script type="module" src="js/init.js"></script>
+  </body>
+</html>

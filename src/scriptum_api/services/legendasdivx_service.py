@@ -209,7 +209,11 @@ class LegendasDivxService:
     def is_available(self) -> bool:
         """Check if LegendasDivx API is available"""
         try:
-            response = requests.get(f"{self.api_base_url}/health", timeout=2)
-            return response.status_code == 200
-        except:
+            print(f"🔍 Checking LegendasDivx availability at: {self.api_base_url}/health")
+            response = requests.get(f"{self.api_base_url}/health", timeout=5)
+            is_ok = response.status_code == 200
+            print(f"{'✅' if is_ok else '❌'} LegendasDivx API status: {response.status_code}")
+            return is_ok
+        except Exception as e:
+            print(f"❌ LegendasDivx API not available: {e}")
             return False
